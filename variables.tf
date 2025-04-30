@@ -29,6 +29,12 @@ variable "datastore_cluster" {
   type        = string
 }
 
+variable "datastore" {
+  description = "The name of the datastore"
+  type        = string
+  default     = null
+}
+
 variable "network" {
   description = "The name of the network"
   type        = string

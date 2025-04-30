@@ -11,6 +11,13 @@ variable "resource_pool_id" {
 variable "datastore_id" {
   description = "The datastore ID to use for the virtual machine"
   type        = string
+  default     = null
+}
+
+variable "datastore_cluster_id" {
+  description = "The datastore cluster ID to use for the virtual machine (alternative to datastore_id)"
+  type        = string
+  default     = null
 }
 
 variable "network_id" {

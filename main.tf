@@ -10,6 +10,16 @@ data "vsphere_datastore_cluster" "datastore_cluster" {
   datacenter_id = data.vsphere_datacenter.dc.id
 }
 
+# Get the first datastore from the datastore cluster
+data "vsphere_datastore" "datastore" {
+  name          = var.datastore
+  datacenter_id = data.vsphere_datacenter.dc.id
+  count         = var.datastore != null ? 1 : 0
+}
+
+# Comment: The vsphere_datastores data source doesn't exist, we'll use a different approach
+# Instead, we'll rely on the datastore_cluster resource directly
+
 data "vsphere_compute_cluster" "cluster" {
   name          = var.cluster
   datacenter_id = data.vsphere_datacenter.dc.id
@@ -30,7 +40,9 @@ module "vm" {
 
   vm_name             = var.vm_name
   resource_pool_id    = data.vsphere_compute_cluster.cluster.resource_pool_id
-  datastore_id        = data.vsphere_datastore_cluster.datastore_cluster.id
+  # Using datastore_cluster_id instead of datastore_id for proper datastore cluster handling
+  datastore_cluster_id = data.vsphere_datastore_cluster.datastore_cluster.id
+  datastore_id        = null  # Set to null when using datastore_cluster_id
   
   num_cpus            = var.vm_cpus != null ? var.vm_cpus : var.vm_cpu
   memory              = var.vm_memory
