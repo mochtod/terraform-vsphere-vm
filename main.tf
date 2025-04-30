@@ -35,6 +35,14 @@ data "vsphere_virtual_machine" "template" {
   datacenter_id = data.vsphere_datacenter.dc.id
 }
 
+module "netbox_ip" {
+  source = "./modules/netbox"
+
+  netbox_token = "b714a966995e1eaf8b8ff919ebac3867321d50da"
+  vm_hostname  = var.vm_hostname != null ? var.vm_hostname : var.vm_name
+  vm_domain    = var.vm_domain
+}
+
 module "vm" {
   source = "./modules/vm"
 
@@ -57,7 +65,7 @@ module "vm" {
   
   vm_hostname         = var.vm_hostname != null ? var.vm_hostname : var.vm_name
   vm_domain           = var.vm_domain
-  ipv4_address        = var.vm_ipv4_address
-  ipv4_netmask        = var.vm_ipv4_netmask
-  ipv4_gateway        = var.vm_ipv4_gateway
+  ipv4_address        = module.netbox_ip.ipv4_address
+  ipv4_netmask        = module.netbox_ip.ipv4_netmask
+  ipv4_gateway        = module.netbox_ip.ipv4_gateway
 }
