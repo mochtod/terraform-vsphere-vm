@@ -1,0 +1,51 @@
+# Main Terraform configuration file
+# The provider configuration has been moved to providers.tf
+
+data "vsphere_datacenter" "dc" {
+  name = var.datacenter
+}
+
+data "vsphere_datastore_cluster" "datastore_cluster" {
+  name          = var.datastore_cluster
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_compute_cluster" "cluster" {
+  name          = var.cluster
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_network" "network" {
+  name          = var.network
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_virtual_machine" "template" {
+  name          = var.vm_template
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+module "vm" {
+  source = "./modules/vm"
+
+  vm_name             = var.vm_name
+  resource_pool_id    = data.vsphere_compute_cluster.cluster.resource_pool_id
+  datastore_id        = data.vsphere_datastore_cluster.datastore_cluster.id
+  
+  num_cpus            = var.vm_cpus != null ? var.vm_cpus : var.vm_cpu
+  memory              = var.vm_memory
+  guest_id            = var.vm_guest_id
+  
+  network_id          = data.vsphere_network.network.id
+  adapter_type        = var.vm_network_adapter_type
+  
+  disk_size           = var.vm_disk_size
+  
+  template_uuid       = data.vsphere_virtual_machine.template.id
+  
+  vm_hostname         = var.vm_hostname != null ? var.vm_hostname : var.vm_name
+  vm_domain           = var.vm_domain
+  ipv4_address        = var.vm_ipv4_address
+  ipv4_netmask        = var.vm_ipv4_netmask
+  ipv4_gateway        = var.vm_ipv4_gateway
+}
