@@ -1,9 +1,10 @@
 # The proper format for a .tfvars file is key = value pairs (without the 'variable' keyword)
 vm_name = "lin2dv2terraform"
 vsphere_user = "chr\\mochtodpa"
-vsphere_password = "FEug@qtO3U1sFAJ#R1"
+# vsphere_password should be set as an environment variable TF_VAR_vsphere_password for security
 vsphere_server = "virtualcenter.chrobinson.com"
 datacenter = "EBDC NONPROD"
+cluster = "np-cl60-lin"  # Corrected cluster parameter
 datastore_cluster = "np-cl60-dsc"
 network = "np-lin-vds-989-linux"
 vm_template = "rhel9-template0314"
