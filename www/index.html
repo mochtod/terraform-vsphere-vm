@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terraform vSphere VM Provisioning</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-server"></i> vSphere VM Provisioning</h1>
+            <p>Create virtual machines in vSphere using Terraform</p>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="vm-form">
+                    <div class="form-section">
+                        <h2>vSphere Connection</h2>
+                        <div class="form-group">
+                            <label for="vsphere_user">vSphere User</label>
+                            <input type="text" id="vsphere_user" name="vsphere_user" value="chr\\mochtodpa" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vsphere_password">vSphere Password</label>
+                            <input type="password" id="vsphere_password" name="vsphere_password" placeholder="Enter password (will be set as environment variable)" required>
+                            <small>This will be securely set as an environment variable.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="vsphere_server">vSphere Server</label>
+                            <input type="text" id="vsphere_server" name="vsphere_server" value="virtualcenter.chrobinson.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>Infrastructure Location</h2>
+                        <div class="form-group">
+                            <label for="datacenter">Datacenter</label>
+                            <input type="text" id="datacenter" name="datacenter" value="EBDC NONPROD" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cluster">Cluster</label>
+                            <input type="text" id="cluster" name="cluster" value="np-cl60-lin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="datastore_cluster">Datastore Cluster</label>
+                            <input type="text" id="datastore_cluster" name="datastore_cluster" value="np-cl60-dsc" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="network">Network</label>
+                            <input type="text" id="network" name="network" value="np-lin-vds-989-linux" required>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>VM Configuration</h2>
+                        <div class="form-group">
+                            <label for="vm_name">VM Name</label>
+                            <input type="text" id="vm_name" name="vm_name" value="lin2dv2terraform" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vm_template">VM Template</label>
+                            <input type="text" id="vm_template" name="vm_template" value="rhel9-template0314" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vm_guest_id">Guest ID</label>
+                            <input type="text" id="vm_guest_id" name="vm_guest_id" value="rhel9_64Guest" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vm_cpu">CPU Cores</label>
+                            <input type="number" id="vm_cpu" name="vm_cpu" value="4" min="1" max="32" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vm_memory">Memory (MB)</label>
+                            <input type="number" id="vm_memory" name="vm_memory" value="32768" min="1024" required>
+                            <small>32768 MB = 32 GB</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="vm_disk_size">Disk Size (GB)</label>
+                            <input type="number" id="vm_disk_size" name="vm_disk_size" value="100" min="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vm_network_adapter_type">Network Adapter Type</label>
+                            <select id="vm_network_adapter_type" name="vm_network_adapter_type" required>
+                                <option value="vmxnet3" selected>vmxnet3</option>
+                                <option value="e1000">e1000</option>
+                                <option value="e1000e">e1000e</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="plan-button" class="btn btn-secondary">
+                            <i class="fas fa-clipboard-check"></i> Generate Plan
+                        </button>
+                        <button type="button" id="apply-button" class="btn btn-primary">
+                            <i class="fas fa-rocket"></i> Apply Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="output-container">
+                <h2>Terraform Output</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="tfvars">tfvars File</button>
+                    <button class="tab-btn" data-tab="plan">Plan Output</button>
+                    <button class="tab-btn" data-tab="apply">Apply Output</button>
+                </div>
+                <div class="tab-content">
+                    <div id="tfvars-output" class="tab-panel active">
+                        <pre><code id="tfvars-code">// Generated tfvars will appear here</code></pre>
+                        <button id="download-tfvars" class="btn btn-small">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                    <div id="plan-output" class="tab-panel">
+                        <pre><code id="plan-code">// Terraform plan output will appear here</code></pre>
+                    </div>
+                    <div id="apply-output" class="tab-panel">
+                        <pre><code id="apply-code">// Terraform apply output will appear here</code></pre>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 TerraSphere VM Provisioning Tool</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
