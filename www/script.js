@@ -151,11 +151,9 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         
         displayWorkspaces(filteredWorkspaces);
-    }
-
-    // Function to create a new workspace
+    }    // Function to create a new workspace
     function createNewWorkspace() {
-        const vmName = prompt('Enter a name for the new VM workspace:');
+        const vmName = prompt('Enter a name for the new VM:');
         
         if (!vmName) return;
         
@@ -177,6 +175,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Add the new workspace to the list and select it
                 loadWorkspaces();
                 selectWorkspace(data.workspace.id);
+                
+                // Set the VM name in the form to match the workspace name
+                document.getElementById('vm_name').value = vmName;
+                
+                // Save the initial config with the VM name
+                saveWorkspaceConfig();
+                
+                // Show success message
+                showNotification(`Created new VM workspace: ${vmName}`, 'success');
             } else {
                 alert(`Error creating workspace: ${data.error}`);
             }
@@ -270,6 +277,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const field = document.getElementById(key);
             if (field) {
                 field.value = value;
+            }
+        }
+        
+        // Auto-populate VM name with workspace name
+        const vmNameField = document.getElementById('vm_name');
+        if (vmNameField && workspace.name) {
+            vmNameField.value = workspace.name;
+            
+            // If we have a config object but no vm_name set yet, add it
+            if (workspace.config && !workspace.config.vm_name) {
+                workspace.config.vm_name = workspace.name;
             }
         }
         
@@ -447,7 +465,84 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Generate tfvars on page load
-    generateTfvars();    // Handle the Plan button click
+    generateTfvars();
+    
+    // Handle the "Refresh VM Status" button click
+    document.getElementById('refresh-vms-btn').addEventListener('click', function() {
+        const deployedVmsList = document.getElementById('deployed-vms-list');
+        
+        // Show loading state
+        deployedVmsList.innerHTML = '<p>Loading deployed VMs from vSphere...</p>';
+        
+        // Get vSphere credentials
+        const vsphereServer = document.getElementById('vsphere_server').value;
+        const vsphereUser = document.getElementById('vsphere_user').value;
+        const vspherePassword = document.getElementById('vsphere_password').value;
+        
+        if (!vsphereServer || !vsphereUser || !vspherePassword) {
+            deployedVmsList.innerHTML = '<p class="error-message">Please enter vSphere connection details first.</p>';
+            return;
+        }
+        
+        // Call the backend API to get VM status
+        fetch('/api/vsphere/vms', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                vsphereServer,
+                vsphereUser,
+                vspherePassword
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                displayVMsList(data.vms);
+            } else {
+                deployedVmsList.innerHTML = `<p class="error-message">Error fetching VMs: ${data.error}</p>`;
+            }
+        })
+        .catch(error => {
+            deployedVmsList.innerHTML = `<p class="error-message">Error connecting to backend: ${error.message}</p>`;
+        });
+    });
+    
+    // Function to display the VMs list
+    function displayVMsList(vms) {
+        const deployedVmsList = document.getElementById('deployed-vms-list');
+        
+        if (!vms || vms.length === 0) {
+            deployedVmsList.innerHTML = '<p>No VMs found in vSphere.</p>';
+            return;
+        }
+        
+        const vmItems = vms.map(vm => {
+            return `
+                <div class="vm-item">
+                    <div class="vm-info">
+                        <div class="vm-name">${vm.name}</div>
+                        <div class="vm-details">
+                            <span>CPU: ${vm.numCpu} cores</span>
+                            <span>Memory: ${Math.round(vm.memorySizeMB / 1024)} GB</span>
+                            <span>Guest OS: ${vm.guestFullName || 'Unknown'}</span>
+                        </div>
+                    </div>
+                    <div class="vm-status ${vm.powerState.toLowerCase()}">${vm.powerState}</div>
+                </div>
+            `;
+        });
+        
+        deployedVmsList.innerHTML = vmItems.join('');
+    }
+    
+    // Handle the Plan button click
     document.getElementById('plan-button').addEventListener('click', function() {
         // Check if a workspace is selected
         if (!window.currentWorkspace) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terraform vSphere VM Provisioning</title>
+    <title>TerraSphere-O-Matic</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -39,25 +39,35 @@
                             <label for="vsphere_server">vSphere Server</label>
                             <input type="text" id="vsphere_server" name="vsphere_server" value="virtualcenter.chrobinson.com" required>
                         </div>
-                    </div>
-
-                    <div class="form-section">
+                    </div>                    <div class="form-section">
                         <h2>Infrastructure Location</h2>
                         <div class="form-group">
                             <label for="datacenter">Datacenter</label>
-                            <input type="text" id="datacenter" name="datacenter" value="EBDC NONPROD" required>
+                            <select id="datacenter" name="datacenter" required>
+                                <option value="">Select Datacenter</option>
+                                <!-- Datacenter options will be populated dynamically -->
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="cluster">Cluster</label>
-                            <input type="text" id="cluster" name="cluster" value="np-cl60-lin" required>
+                            <select id="cluster" name="cluster" required>
+                                <option value="">Select Cluster</option>
+                                <!-- Cluster options will be populated dynamically -->
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="datastore_cluster">Datastore Cluster</label>
-                            <input type="text" id="datastore_cluster" name="datastore_cluster" value="np-cl60-dsc" required>
+                            <select id="datastore_cluster" name="datastore_cluster" required>
+                                <option value="">Select Datastore Cluster</option>
+                                <!-- Datastore cluster options will be populated dynamically -->
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="network">Network</label>
-                            <input type="text" id="network" name="network" value="np-lin-vds-989-linux" required>
+                            <select id="network" name="network" required>
+                                <option value="">Select Network</option>
+                                <!-- Network options will be populated dynamically -->
+                            </select>
                         </div>
                     </div>
 
@@ -110,14 +120,13 @@
             </div>
 
             <div class="output-container">
-                <h2>Terraform Output</h2>
-                <div class="tabs">
+                <h2>Terraform Output</h2>                <div class="tabs">
                     <button class="tab-btn active" data-tab="tfvars">tfvars File</button>
                     <button class="tab-btn" data-tab="plan">Plan Output</button>
                     <button class="tab-btn" data-tab="apply">Apply Output</button>
+                    <button class="tab-btn" data-tab="deployed-vms">VM Health</button>
                 </div>
-                <div class="tab-content">
-                    <div id="tfvars-output" class="tab-panel active">
+                <div class="tab-content">                <div id="tfvars-output" class="tab-panel active">
                         <pre><code id="tfvars-code">// Generated tfvars will appear here</code></pre>
                         <button id="download-tfvars" class="btn btn-small">
                             <i class="fas fa-download"></i> Download
@@ -128,6 +137,22 @@
                     </div>
                     <div id="apply-output" class="tab-panel">
                         <pre><code id="apply-code">// Terraform apply output will appear here</code></pre>
+                    </div>                    <div id="deployed-vms-output" class="tab-panel">
+                        <div class="deployed-vms-controls">
+                            <button id="refresh-vms-btn" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Check VM Health
+                            </button>
+                        </div>
+                        <div id="vm-health-container">
+                            <div class="vm-health-header">
+                                <div id="vm-health-status">
+                                    <p>Click "Check VM Health" to view status and health metrics for the current VM.</p>
+                                </div>
+                            </div>
+                            <div id="vm-health-metrics">
+                                <!-- VM health metrics will be displayed here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -159,9 +184,8 @@
                     <p>Loading workspaces...</p>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+        </div>    </div>    <script src="script.js"></script>
+    <script src="vm-status.js"></script>
+    <script src="infrastructure-dropdowns.js"></script>
 </body>
 </html>

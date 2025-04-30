@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -13,6 +14,14 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(__dirname));
+
+// Register vSphere API routes - Explicitly require the module here
+const vsphereRouter = require('./vsphere-api');
+app.use('/api/vsphere', vsphereRouter);
+
+// Register vSphere Infrastructure API routes
+const vsphereInfraRouter = require('./vsphere-infra-api');
+app.use('/api/vsphere-infra', vsphereInfraRouter);
 
 // Directory for storing tfvars files
 const TFVARS_DIR = path.join(__dirname, 'terraform_runs');
@@ -476,131 +485,16 @@ app.get('/api/terraform/deployments', (req, res) => {
     }
 });
 
-// Endpoint to destroy a VM
-app.post('/api/terraform/destroy', async (req, res) => {
+// Workspace management endpoint - manage workspace state changes
+// Combined endpoint to handle workspace operations (replaces the separate destroy endpoints)
+app.post('/api/terraform/manage-workspace', async (req, res) => {
     try {
-        const { runDir, vspherePassword } = req.body;
+        const { operation, workspaceId, vspherePassword } = req.body;
         
-        if (!runDir) {
-            return res.status(400).json({ error: 'Missing run directory' });
-        }
-
-        // Check if the directory exists
-        const fullRunDir = path.join(TFVARS_DIR, runDir);
-        if (!fs.existsSync(fullRunDir)) {
-            return res.status(404).json({ error: 'Run directory not found' });
-        }
-
-        // Find the tfvars file in the directory
-        const files = fs.readdirSync(fullRunDir);
-        const tfvarsFile = files.find(file => file.endsWith('.tfvars'));
-        
-        if (!tfvarsFile) {
-            return res.status(404).json({ error: 'Tfvars file not found in run directory' });
-        }        const tfvarsPath = path.join(fullRunDir, tfvarsFile);
-
-        // Set up environment for terraform
-        const terraformDir = path.join(__dirname, '..'); // Go up one directory to the root where .tf files are
-        const env = {
-            'TF_VAR_vsphere_password': vspherePassword
-        };
-
-        // Create or update the status file
-        const statusFilePath = path.join(fullRunDir, 'status.json');
-        let statusData = {
-            status: 'destroying',
-            startTime: new Date().toISOString(),
-            logs: []
-        };
-        
-        if (fs.existsSync(statusFilePath)) {
-            try {
-                const existingStatus = JSON.parse(fs.readFileSync(statusFilePath));
-                statusData = {
-                    ...existingStatus,
-                    status: 'destroying',
-                    destroyStartTime: new Date().toISOString(),
-                    logs: existingStatus.logs.concat({
-                        time: new Date().toISOString(),
-                        message: 'Starting destroy operation'
-                    })
-                };
-            } catch (e) {
-                console.error('Error reading existing status file:', e);
-            }
-        }
-        
-        fs.writeFileSync(statusFilePath, JSON.stringify(statusData, null, 2));
-
-        // Run terraform destroy
-        console.log('Destroying infrastructure for:', runDir);
-        const destroyResult = await runTerraformCommand('destroy', [
-            '-auto-approve',
-            '-var-file', tfvarsPath
-        ], terraformDir, env);
-
-        // Update status file with success
-        const updatedStatus = {
-            ...statusData,
-            status: 'destroyed',
-            destroyEndTime: new Date().toISOString(),
-            logs: statusData.logs.concat({
-                time: new Date().toISOString(),
-                message: 'Terraform destroy completed successfully'
-            }),
-            destroyOutput: destroyResult.stdout
-        };
-        fs.writeFileSync(statusFilePath, JSON.stringify(updatedStatus, null, 2));
-
-        res.json({
-            success: true,
-            message: 'Terraform destroy completed successfully',
-            destroyOutput: destroyResult.stdout
-        });
-    } catch (error) {
-        console.error('Error destroying infrastructure:', error);
-        
-        // Update status file with error
-        if (req.body.runDir) {
-            const statusFilePath = path.join(TFVARS_DIR, req.body.runDir, 'status.json');
-            if (fs.existsSync(statusFilePath)) {
-                try {
-                    const statusData = JSON.parse(fs.readFileSync(statusFilePath));
-                    const updatedStatus = {
-                        ...statusData,
-                        status: 'destroy_failed',
-                        destroyEndTime: new Date().toISOString(),
-                        logs: statusData.logs.concat({
-                            time: new Date().toISOString(),
-                            message: 'Terraform destroy failed',
-                            error: error.stdout || error.stderr || error.message
-                        }),
-                        destroyError: error.stdout || error.stderr || error.message
-                    };
-                    fs.writeFileSync(statusFilePath, JSON.stringify(updatedStatus, null, 2));
-                } catch (statusError) {
-                    console.error('Error updating status file:', statusError);
-                }
-            }
-        }
-        
-        res.status(500).json({
-            success: false,
-            message: 'Error destroying infrastructure',
-            error: error.stdout || error.stderr || error.message
-        });
-    }
-});
-
-// Endpoint to destroy a VM but keep the workspace
-app.post('/api/terraform/destroy', async (req, res) => {
-    try {
-        const { workspaceId, vspherePassword } = req.body;
-        
-        if (!workspaceId) {
+        if (!workspaceId || !operation) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Workspace ID is required' 
+                error: 'Workspace ID and operation are required' 
             });
         }
 
@@ -616,113 +510,50 @@ app.post('/api/terraform/destroy', async (req, res) => {
         // Get workspace data
         const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
         
-        if (workspace.status !== 'deployed') {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'VM is not in deployed state' 
-            });
+        // Handle operation based on the requested action
+        switch (operation) {
+            case 'reset':
+                // Update workspace status to reset
+                workspace.status = 'reset';
+                workspace.lastUpdated = new Date().toISOString();
+                fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                
+                res.json({
+                    success: true,
+                    message: 'Workspace has been reset and is ready for new configurations',
+                    workspace
+                });
+                break;
+                
+            case 'archive':
+                // Mark the workspace as archived
+                workspace.status = 'archived';
+                workspace.lastUpdated = new Date().toISOString();
+                fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                
+                res.json({
+                    success: true,
+                    message: 'Workspace has been archived',
+                    workspace
+                });
+                break;
+                
+            default:
+                return res.status(400).json({
+                    success: false,
+                    error: `Unknown operation: ${operation}. Supported operations are: reset, archive`
+                });
         }
-
-        if (!workspace.terraformDir || !fs.existsSync(workspace.terraformDir)) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Terraform directory not found for this workspace' 
-            });
-        }
-
-        // Create a unique directory for this destroy operation
-        const timestamp = getTimestamp();
-        const vmName = workspace.config && workspace.config.vm_name || 'unknown-vm';
-        const destroyDir = path.join(TFVARS_DIR, `${vmName}-destroy-${timestamp}`);
-        fs.mkdirSync(destroyDir, { recursive: true });
-
-        // Create a status file to track this destroy operation
-        const statusFilePath = path.join(destroyDir, 'status.json');
-        const statusData = {
-            status: 'destroying',
-            startTime: new Date().toISOString(),
-            workspaceId: workspaceId,
-            logs: []
-        };
-        fs.writeFileSync(statusFilePath, JSON.stringify(statusData, null, 2));
-
-        // Set up environment for terraform
-        const env = {
-            'TF_VAR_vsphere_password': vspherePassword
-        };
-
-        // Run terraform destroy
-        console.log(`Destroying VM for workspace ${workspaceId}`);
-        
-        // We need the tfvars file for destroy to work properly
-        if (!workspace.tfvarsPath || !fs.existsSync(workspace.tfvarsPath)) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'tfvars file not found' 
-            });
-        }
-
-        const destroyResult = await runTerraformCommand('destroy', [
-            '-auto-approve',
-            '-var-file', workspace.tfvarsPath
-        ], workspace.terraformDir, env);
-
-        // Update status file with success
-        const updatedStatus = {
-            ...statusData,
-            status: 'destroyed',
-            endTime: new Date().toISOString(),
-            logs: statusData.logs.concat({
-                time: new Date().toISOString(),
-                message: 'Terraform destroy completed successfully'
-            }),
-            output: destroyResult.stdout
-        };
-        fs.writeFileSync(statusFilePath, JSON.stringify(updatedStatus, null, 2));
-
-        // Update the workspace data
-        workspace.status = 'destroyed';
-        workspace.destroyOutput = destroyResult.stdout;
-        workspace.lastDestroyed = new Date().toISOString();
-        // Don't delete the workspace config or terraform directory
-        
-        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
-
-        res.json({
-            success: true,
-            message: 'VM destroyed successfully',
-            destroyOutput: destroyResult.stdout
-        });
     } catch (error) {
-        console.error('Error destroying VM:', error);
-        
-        // If we have a workspace ID, update the workspace data with error
-        if (req.body.workspaceId) {
-            try {
-                const workspacePath = path.join(WORKSPACES_DIR, `${req.body.workspaceId}.json`);
-                if (fs.existsSync(workspacePath)) {
-                    const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
-                    
-                    workspace.status = 'destroy_failed';
-                    workspace.error = error.stderr || error.message;
-                    workspace.lastUpdated = new Date().toISOString();
-                    
-                    fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
-                }
-            } catch (wsError) {
-                console.error('Error updating workspace data:', wsError);
-            }
-        }
-        
+        console.error('Error managing workspace:', error);
         res.status(500).json({
             success: false,
-            message: 'Error destroying VM',
-            error: error.stdout || error.stderr || error.message
+            message: 'Error managing workspace',
+            error: error.message
         });
     }
 });
 
-// Workspace management functions
 // Get all workspaces
 app.get('/api/workspaces', (req, res) => {
     try {

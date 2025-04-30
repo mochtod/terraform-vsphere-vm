@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-04-30T06:42:01.474Z",
+  "planPath": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terra-1-2025-04-30T06-14-56/lin2dv2terra-1.tfplan",
+  "logs": [
+    {
+      "time": "2025-04-30T06:42:02.402Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mError acquiring the state lock\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0mError message: resource temporarily unavailable\n\u001b[31m│\u001b[0m \u001b[0mLock Info:\n\u001b[31m│\u001b[0m \u001b[0m  ID:        9a055421-f7c8-b8f0-e501-46697fa28d2e\n\u001b[31m│\u001b[0m \u001b[0m  Path:      terraform.tfstate\n\u001b[31m│\u001b[0m \u001b[0m  Operation: OperationTypePlan\n\u001b[31m│\u001b[0m \u001b[0m  Who:       root@US-HW9D3M3\n\u001b[31m│\u001b[0m \u001b[0m  Version:   1.11.4\n\u001b[31m│\u001b[0m \u001b[0m  Created:   2025-04-30 06:41:58.549971158 +0000 UTC\n\u001b[31m│\u001b[0m \u001b[0m  Info:      \n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0mTerraform acquires a state lock to protect the state from being written\n\u001b[31m│\u001b[0m \u001b[0mby multiple users at the same time. Please resolve the issue above and try\n\u001b[31m│\u001b[0m \u001b[0magain. For most commands, you can disable locking with the \"-lock=false\"\n\u001b[31m│\u001b[0m \u001b[0mflag, but this is not recommended.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-04-30T06:42:02.402Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mError acquiring the state lock\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0mError message: resource temporarily unavailable\n\u001b[31m│\u001b[0m \u001b[0mLock Info:\n\u001b[31m│\u001b[0m \u001b[0m  ID:        9a055421-f7c8-b8f0-e501-46697fa28d2e\n\u001b[31m│\u001b[0m \u001b[0m  Path:      terraform.tfstate\n\u001b[31m│\u001b[0m \u001b[0m  Operation: OperationTypePlan\n\u001b[31m│\u001b[0m \u001b[0m  Who:       root@US-HW9D3M3\n\u001b[31m│\u001b[0m \u001b[0m  Version:   1.11.4\n\u001b[31m│\u001b[0m \u001b[0m  Created:   2025-04-30 06:41:58.549971158 +0000 UTC\n\u001b[31m│\u001b[0m \u001b[0m  Info:      \n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0mTerraform acquires a state lock to protect the state from being written\n\u001b[31m│\u001b[0m \u001b[0mby multiple users at the same time. Please resolve the issue above and try\n\u001b[31m│\u001b[0m \u001b[0magain. For most commands, you can disable locking with the \"-lock=false\"\n\u001b[31m│\u001b[0m \u001b[0mflag, but this is not recommended.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

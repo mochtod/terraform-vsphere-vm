@@ -580,3 +580,66 @@ footer {
 .status-failed, .status-destroy_failed {
     background-color: var(--danger-color);
 }
+
+/* Additional styles for Deployed VMs tab */
+.deployed-vms-controls {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vm-item {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+.vm-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.vm-details {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9rem;
+}
+
+.vm-status {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-align: center;
+    min-width: 80px;
+}
+
+.vm-status.powered-on {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.vm-status.powered-off {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.vm-status.suspended {
+    background-color: var(--warning-color);
+    color: #333;
+}
+
+.vm-status.unknown {
+    background-color: #777;
+    color: white;
+}
+
+.vm-actions {
+    display: flex;
+    gap: 10px;
+}
