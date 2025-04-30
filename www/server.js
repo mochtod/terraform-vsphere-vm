@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const { exec, spawn } = require('child_process');
+const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +18,18 @@ app.use(express.static(__dirname));
 const TFVARS_DIR = path.join(__dirname, 'terraform_runs');
 if (!fs.existsSync(TFVARS_DIR)) {
     fs.mkdirSync(TFVARS_DIR, { recursive: true });
+}
+
+// Directory for storing VM workspaces
+const WORKSPACES_DIR = path.join(__dirname, 'vm_workspaces');
+if (!fs.existsSync(WORKSPACES_DIR)) {
+    fs.mkdirSync(WORKSPACES_DIR, { recursive: true });
+}
+
+// Directory for storing Terraform configuration files
+const TF_CONFIGS_DIR = path.join(__dirname, 'terraform_configs');
+if (!fs.existsSync(TF_CONFIGS_DIR)) {
+    fs.mkdirSync(TF_CONFIGS_DIR, { recursive: true });
 }
 
 // Helper function to generate a timestamp for filenames
@@ -62,18 +75,111 @@ function runTerraformCommand(command, args, workingDir, env = {}) {
     });
 }
 
+// Helper function to copy Terraform files to a workspace directory
+async function setupTerraformWorkspace(workspaceId, vmName) {
+    const workspaceTfDir = path.join(TF_CONFIGS_DIR, workspaceId);
+    
+    // Create workspace directory if it doesn't exist
+    if (!fs.existsSync(workspaceTfDir)) {
+        fs.mkdirSync(workspaceTfDir, { recursive: true });
+    }
+    
+    // Copy the main Terraform files from the root to the workspace directory
+    const rootTfDir = path.join(__dirname, '..');
+    const filesToCopy = [
+        'main.tf',
+        'variables.tf',
+        'outputs.tf',
+        'providers.tf'
+    ];
+    
+    for (const file of filesToCopy) {
+        const sourcePath = path.join(rootTfDir, file);
+        const destPath = path.join(workspaceTfDir, file);
+        
+        if (fs.existsSync(sourcePath)) {
+            fs.copyFileSync(sourcePath, destPath);
+            console.log(`Copied ${file} to workspace ${workspaceId}`);
+        }
+    }
+    
+    // Copy modules directory if it exists
+    const sourceModulesDir = path.join(rootTfDir, 'modules');
+    const destModulesDir = path.join(workspaceTfDir, 'modules');
+    
+    if (fs.existsSync(sourceModulesDir)) {
+        if (!fs.existsSync(destModulesDir)) {
+            fs.mkdirSync(destModulesDir, { recursive: true });
+        }
+        
+        copyDirRecursive(sourceModulesDir, destModulesDir);
+        console.log(`Copied modules directory to workspace ${workspaceId}`);
+    }
+    
+    // Initialize the new workspace
+    return workspaceTfDir;
+}
+
+// Helper function to recursively copy directories
+function copyDirRecursive(source, destination) {
+    const entries = fs.readdirSync(source, { withFileTypes: true });
+    
+    for (const entry of entries) {
+        const sourcePath = path.join(source, entry.name);
+        const destPath = path.join(destination, entry.name);
+        
+        if (entry.isDirectory()) {
+            if (!fs.existsSync(destPath)) {
+                fs.mkdirSync(destPath, { recursive: true });
+            }
+            copyDirRecursive(sourcePath, destPath);
+        } else {
+            fs.copyFileSync(sourcePath, destPath);
+        }
+    }
+}
+
 // Endpoint to save tfvars and generate terraform plan
 app.post('/api/terraform/plan', async (req, res) => {
     try {
-        const { vmVars, vspherePassword } = req.body;
+        const { vmVars, vspherePassword, workspaceId } = req.body;
+        
+        // Add detailed logging to troubleshoot the request
+        console.log('Plan request received with:', {
+            hasVmVars: !!vmVars,
+            hasPassword: !!vspherePassword,
+            workspaceId: workspaceId || 'not provided'
+        });
         
         if (!vmVars || !vspherePassword) {
-            return res.status(400).json({ error: 'Missing required parameters' });
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing required parameters: ' + (!vmVars ? 'vmVars ' : '') + (!vspherePassword ? 'vspherePassword' : '')
+            });
         }
 
+        if (!workspaceId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Workspace ID is required. Please select or create a workspace first.'
+            });
+        }
+
+        // Check if workspace exists
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ 
+                success: false, 
+                error: `Workspace not found with ID: ${workspaceId}` 
+            });
+        }
+
+        // Get workspace data
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        const vmName = vmVars.vm_name || 'default-vm';
+        
         // Create a unique directory for this run
         const timestamp = getTimestamp();
-        const vmName = vmVars.vm_name || 'default-vm';
         const runDir = path.join(TFVARS_DIR, `${vmName}-${timestamp}`);
         fs.mkdirSync(runDir, { recursive: true });
 
@@ -91,31 +197,47 @@ app.post('/api/terraform/plan', async (req, res) => {
         }
         
         fs.writeFileSync(tfvarsPath, tfvarsContent);
-        console.log(`Saved tfvars to ${tfvarsPath}`);        // Set up environment for terraform
-        const terraformDir = path.join(__dirname, '..');  // Go up one directory to the root where .tf files are
+        console.log(`Saved tfvars to ${tfvarsPath}`);
+
+        // Set up the isolated Terraform workspace
+        const terraformWorkspaceDir = await setupTerraformWorkspace(workspaceId, vmName);
+        
+        // Set up environment for terraform
         const env = {
             'TF_VAR_vsphere_password': vspherePassword
         };
 
-        // Run terraform init if needed
-        await runTerraformCommand('init', [], terraformDir, env);
+        // Run terraform init in the workspace directory
+        await runTerraformCommand('init', [], terraformWorkspaceDir, env);
 
         // Run terraform validate
-        await runTerraformCommand('validate', [], terraformDir, env);
+        await runTerraformCommand('validate', [], terraformWorkspaceDir, env);
 
         // Run terraform plan
         const planPath = path.join(runDir, `${vmName}.tfplan`);
         const planResult = await runTerraformCommand('plan', [
             '-var-file', tfvarsPath,
             '-out', planPath
-        ], terraformDir, env);
+        ], terraformWorkspaceDir, env);
+
+        // Update the workspace data
+        workspace.planPath = planPath;
+        workspace.runDir = runDir;
+        workspace.terraformDir = terraformWorkspaceDir;
+        workspace.tfvarsPath = tfvarsPath;
+        workspace.planOutput = planResult.stdout;
+        workspace.lastPlanned = new Date().toISOString();
+        workspace.status = 'planned';
+        
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
 
         res.json({
             success: true,
             message: 'Plan generated successfully',
             planOutput: planResult.stdout,
             planPath: planPath,
-            runDir: runDir
+            runDir: runDir,
+            terraformDir: terraformWorkspaceDir
         });
     } catch (error) {
         console.error('Error generating plan:', error);
@@ -130,17 +252,45 @@ app.post('/api/terraform/plan', async (req, res) => {
 // Endpoint to apply terraform plan
 app.post('/api/terraform/apply', async (req, res) => {
     try {
-        const { planPath, vspherePassword, runDir } = req.body;
+        const { planPath, vspherePassword, runDir, workspaceId } = req.body;
         
-        if (!planPath) {
-            return res.status(400).json({ error: 'Missing plan path' });
-        }        // Check if the plan file exists
+        if (!planPath || !workspaceId) {
+            return res.status(400).json({ error: 'Missing required parameters' });
+        }
+
+        // Check if workspace exists
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Workspace not found' 
+            });
+        }
+
+        // Get workspace data to find the terraform directory
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        
+        if (!workspace.terraformDir) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'No Terraform directory found for this workspace. Please run plan first.' 
+            });
+        }
+
+        // Check if the terraform directory exists
+        if (!fs.existsSync(workspace.terraformDir)) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Terraform directory not found' 
+            });
+        }
+
+        // Check if the plan file exists
         if (!fs.existsSync(planPath)) {
             return res.status(404).json({ error: 'Plan file not found' });
         }
 
         // Set up environment for terraform
-        const terraformDir = path.join(__dirname, '..'); // Go up one directory to the root where .tf files are
         const env = {
             'TF_VAR_vsphere_password': vspherePassword
         };
@@ -155,13 +305,12 @@ app.post('/api/terraform/apply', async (req, res) => {
         };
         fs.writeFileSync(statusFilePath, JSON.stringify(statusData, null, 2));
 
-        // Run terraform apply
+        // Run terraform apply from the workspace directory
         console.log('Applying terraform plan:', planPath);
         
-        // Run terraform apply
         const applyResult = await runTerraformCommand('apply', [
             planPath
-        ], terraformDir, env);
+        ], workspace.terraformDir, env);
 
         // Update status file with success
         const updatedStatus = {
@@ -176,11 +325,22 @@ app.post('/api/terraform/apply', async (req, res) => {
         };
         fs.writeFileSync(statusFilePath, JSON.stringify(updatedStatus, null, 2));
 
+        // Extract VM ID from output
+        const vmId = extractVmIdFromOutput(applyResult.stdout);
+
+        // Update the workspace data
+        workspace.applyOutput = applyResult.stdout;
+        workspace.vmId = vmId;
+        workspace.status = 'deployed';
+        workspace.lastDeployed = new Date().toISOString();
+        
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+
         res.json({
             success: true,
             message: 'Terraform apply completed successfully',
             applyOutput: applyResult.stdout,
-            vmId: extractVmIdFromOutput(applyResult.stdout),
+            vmId: vmId,
             statusFile: statusFilePath
         });
     } catch (error) {
@@ -199,14 +359,32 @@ app.post('/api/terraform/apply', async (req, res) => {
                         logs: statusData.logs.concat({
                             time: new Date().toISOString(),
                             message: 'Terraform apply failed',
-                            error: error.stdout || error.stderr || error.message
+                            error: error.stderr || error.message
                         }),
-                        error: error.stdout || error.stderr || error.message
+                        error: error.stderr || error.message
                     };
                     fs.writeFileSync(statusFilePath, JSON.stringify(updatedStatus, null, 2));
                 } catch (statusError) {
                     console.error('Error updating status file:', statusError);
                 }
+            }
+        }
+
+        // Update workspace data with error if we have a workspace ID
+        if (req.body.workspaceId) {
+            try {
+                const workspacePath = path.join(WORKSPACES_DIR, `${req.body.workspaceId}.json`);
+                if (fs.existsSync(workspacePath)) {
+                    const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+                    
+                    workspace.status = 'failed';
+                    workspace.error = error.stderr || error.message;
+                    workspace.lastUpdated = new Date().toISOString();
+                    
+                    fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                }
+            } catch (wsError) {
+                console.error('Error updating workspace data:', wsError);
             }
         }
         
@@ -411,6 +589,364 @@ app.post('/api/terraform/destroy', async (req, res) => {
             message: 'Error destroying infrastructure',
             error: error.stdout || error.stderr || error.message
         });
+    }
+});
+
+// Endpoint to destroy a VM but keep the workspace
+app.post('/api/terraform/destroy', async (req, res) => {
+    try {
+        const { workspaceId, vspherePassword } = req.body;
+        
+        if (!workspaceId) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Workspace ID is required' 
+            });
+        }
+
+        // Check if workspace exists
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Workspace not found' 
+            });
+        }
+
+        // Get workspace data
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        
+        if (workspace.status !== 'deployed') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'VM is not in deployed state' 
+            });
+        }
+
+        if (!workspace.terraformDir || !fs.existsSync(workspace.terraformDir)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Terraform directory not found for this workspace' 
+            });
+        }
+
+        // Create a unique directory for this destroy operation
+        const timestamp = getTimestamp();
+        const vmName = workspace.config && workspace.config.vm_name || 'unknown-vm';
+        const destroyDir = path.join(TFVARS_DIR, `${vmName}-destroy-${timestamp}`);
+        fs.mkdirSync(destroyDir, { recursive: true });
+
+        // Create a status file to track this destroy operation
+        const statusFilePath = path.join(destroyDir, 'status.json');
+        const statusData = {
+            status: 'destroying',
+            startTime: new Date().toISOString(),
+            workspaceId: workspaceId,
+            logs: []
+        };
+        fs.writeFileSync(statusFilePath, JSON.stringify(statusData, null, 2));
+
+        // Set up environment for terraform
+        const env = {
+            'TF_VAR_vsphere_password': vspherePassword
+        };
+
+        // Run terraform destroy
+        console.log(`Destroying VM for workspace ${workspaceId}`);
+        
+        // We need the tfvars file for destroy to work properly
+        if (!workspace.tfvarsPath || !fs.existsSync(workspace.tfvarsPath)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'tfvars file not found' 
+            });
+        }
+
+        const destroyResult = await runTerraformCommand('destroy', [
+            '-auto-approve',
+            '-var-file', workspace.tfvarsPath
+        ], workspace.terraformDir, env);
+
+        // Update status file with success
+        const updatedStatus = {
+            ...statusData,
+            status: 'destroyed',
+            endTime: new Date().toISOString(),
+            logs: statusData.logs.concat({
+                time: new Date().toISOString(),
+                message: 'Terraform destroy completed successfully'
+            }),
+            output: destroyResult.stdout
+        };
+        fs.writeFileSync(statusFilePath, JSON.stringify(updatedStatus, null, 2));
+
+        // Update the workspace data
+        workspace.status = 'destroyed';
+        workspace.destroyOutput = destroyResult.stdout;
+        workspace.lastDestroyed = new Date().toISOString();
+        // Don't delete the workspace config or terraform directory
+        
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+
+        res.json({
+            success: true,
+            message: 'VM destroyed successfully',
+            destroyOutput: destroyResult.stdout
+        });
+    } catch (error) {
+        console.error('Error destroying VM:', error);
+        
+        // If we have a workspace ID, update the workspace data with error
+        if (req.body.workspaceId) {
+            try {
+                const workspacePath = path.join(WORKSPACES_DIR, `${req.body.workspaceId}.json`);
+                if (fs.existsSync(workspacePath)) {
+                    const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+                    
+                    workspace.status = 'destroy_failed';
+                    workspace.error = error.stderr || error.message;
+                    workspace.lastUpdated = new Date().toISOString();
+                    
+                    fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                }
+            } catch (wsError) {
+                console.error('Error updating workspace data:', wsError);
+            }
+        }
+        
+        res.status(500).json({
+            success: false,
+            message: 'Error destroying VM',
+            error: error.stdout || error.stderr || error.message
+        });
+    }
+});
+
+// Workspace management functions
+// Get all workspaces
+app.get('/api/workspaces', (req, res) => {
+    try {
+        // Read the workspaces directory and get all workspace files
+        const workspaceFiles = fs.readdirSync(WORKSPACES_DIR)
+            .filter(file => file.endsWith('.json'));
+        
+        const workspaces = workspaceFiles.map(file => {
+            try {
+                const workspacePath = path.join(WORKSPACES_DIR, file);
+                const workspaceData = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+                return {
+                    id: workspaceData.id,
+                    name: workspaceData.name,
+                    createdAt: workspaceData.createdAt,
+                    status: workspaceData.status || 'created'
+                };
+            } catch (error) {
+                console.error(`Error reading workspace file ${file}:`, error);
+                return null;
+            }
+        }).filter(Boolean); // Remove any null entries
+        
+        res.json({ success: true, workspaces });
+    } catch (error) {
+        console.error('Error getting workspaces:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get a specific workspace
+app.get('/api/workspaces/:id', (req, res) => {
+    try {
+        const workspaceId = req.params.id;
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ success: false, error: 'Workspace not found' });
+        }
+        
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        res.json({ success: true, workspace });
+    } catch (error) {
+        console.error('Error getting workspace:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Create a new workspace
+app.post('/api/workspaces/create', async (req, res) => {
+    try {
+        const { name } = req.body;
+        
+        if (!name) {
+            return res.status(400).json({ success: false, error: 'Workspace name is required' });
+        }
+        
+        const workspaceId = uuidv4();
+        const workspace = {
+            id: workspaceId,
+            name,
+            createdAt: new Date().toISOString(),
+            config: {},
+            status: 'created'
+        };
+        
+        // Create the workspace directory for Terraform files
+        const workspaceTfDir = path.join(TF_CONFIGS_DIR, workspaceId);
+        if (!fs.existsSync(workspaceTfDir)) {
+            fs.mkdirSync(workspaceTfDir, { recursive: true });
+        }
+        
+        // Save workspace data
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+        
+        res.json({ success: true, workspace });
+    } catch (error) {
+        console.error('Error creating workspace:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Update workspace config
+app.post('/api/workspaces/:id/config', (req, res) => {
+    try {
+        const workspaceId = req.params.id;
+        const { config } = req.body;
+        
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ success: false, error: 'Workspace not found' });
+        }
+        
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        workspace.config = config;
+        workspace.lastUpdated = new Date().toISOString();
+        
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+        
+        res.json({ success: true, workspace });
+    } catch (error) {
+        console.error('Error updating workspace config:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Update workspace plan data
+app.post('/api/workspaces/:id/plan', (req, res) => {
+    try {
+        const workspaceId = req.params.id;
+        const { planPath, runDir, planOutput } = req.body;
+        
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ success: false, error: 'Workspace not found' });
+        }
+        
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        workspace.planPath = planPath;
+        workspace.runDir = runDir;
+        workspace.planOutput = planOutput;
+        workspace.lastPlanned = new Date().toISOString();
+        workspace.status = 'planned';
+        
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+        
+        res.json({ success: true, workspace });
+    } catch (error) {
+        console.error('Error updating workspace plan data:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Update workspace apply data
+app.post('/api/workspaces/:id/apply', (req, res) => {
+    try {
+        const workspaceId = req.params.id;
+        const { applyOutput, vmId, status } = req.body;
+        
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ success: false, error: 'Workspace not found' });
+        }
+        
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        workspace.applyOutput = applyOutput;
+        workspace.vmId = vmId;
+        workspace.status = status || 'deployed';
+        workspace.lastDeployed = new Date().toISOString();
+        
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+        
+        res.json({ success: true, workspace });
+    } catch (error) {
+        console.error('Error updating workspace apply data:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Delete a workspace
+app.delete('/api/workspaces/:id', (req, res) => {
+    try {
+        const workspaceId = req.params.id;
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ success: false, error: 'Workspace not found' });
+        }
+        
+        fs.unlinkSync(workspacePath);
+        
+        res.json({ success: true, message: 'Workspace deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting workspace:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get all deployed VMs
+app.get('/api/deployed-vms', (req, res) => {
+    try {
+        // Read all workspace files and find deployed VMs
+        const workspaceFiles = fs.readdirSync(WORKSPACES_DIR)
+            .filter(file => file.endsWith('.json'));
+        
+        const deployedVMs = [];
+        
+        workspaceFiles.forEach(file => {
+            try {
+                const workspacePath = path.join(WORKSPACES_DIR, file);
+                const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+                
+                // Include only deployed VMs
+                if (workspace.status === 'deployed' && workspace.vmId) {
+                    deployedVMs.push({
+                        id: workspace.id,
+                        name: workspace.name,
+                        vmName: workspace.config && workspace.config.vm_name || 'unknown',
+                        vmId: workspace.vmId,
+                        deployedAt: workspace.lastDeployed,
+                        config: {
+                            cpu: workspace.config && workspace.config.vm_cpu || 'unknown',
+                            memory: workspace.config && workspace.config.vm_memory || 'unknown',
+                            diskSize: workspace.config && workspace.config.vm_disk_size || 'unknown'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error(`Error reading workspace file ${file}:`, error);
+            }
+        });
+        
+        res.json({ 
+            success: true, 
+            deployedVMs,
+            count: deployedVMs.length
+        });
+    } catch (error) {
+        console.error('Error getting deployed VMs:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 

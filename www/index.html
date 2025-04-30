@@ -11,9 +11,14 @@
     <div class="container">        <header>
             <h1><i class="fas fa-server"></i> vSphere VM Provisioning</h1>
             <p>Create virtual machines in vSphere using Terraform</p>
-            <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
-                <i class="fas fa-moon"></i>
-            </button>
+            <div class="header-buttons">
+                <button id="manage-vms-btn" class="btn btn-secondary">
+                    <i class="fas fa-th-large"></i> Manage VM Workspaces
+                </button>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
         </header>
 
         <main>
@@ -131,6 +136,30 @@
         <footer>
             <p>&copy; 2025 TerraSphere VM Provisioning Tool</p>
         </footer>
+    </div>
+
+    <!-- VM Workspace Management Modal -->
+    <div id="vm-workspace-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-th-large"></i> VM Workspace Management</h2>
+                <button id="close-modal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="workspace-controls">
+                    <button id="new-workspace-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New VM Workspace
+                    </button>
+                    <div class="search-container">
+                        <input type="text" id="workspace-search" placeholder="Search workspaces...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                </div>
+                <div id="workspaces-list" class="workspaces-list">
+                    <p>Loading workspaces...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
