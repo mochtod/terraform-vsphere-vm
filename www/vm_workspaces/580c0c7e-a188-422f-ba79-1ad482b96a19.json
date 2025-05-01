@@ -6,7 +6,7 @@
     "datacenter": "EBDC NONPROD",
     "cluster": "np-cl60-lin",
     "datastore_cluster": "np-cl60-dsc",
-    "network": "np-lin-vds-989-linux",
+    "network": "",
     "vm_name": "lin2dc2terra-25",
     "vm_template": "rhel9-template0314",
     "vm_guest_id": "rhel9_64Guest",
@@ -16,7 +16,7 @@
     "vm_network_adapter_type": "vmxnet3"
   },
   "status": "deployed",
-  "lastUpdated": "2025-05-01T03:09:27.996Z",
+  "lastUpdated": "2025-05-01T03:55:16.292Z",
   "planPath": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dc2terra-25-2025-05-01T03-05-09/lin2dc2terra-25.tfplan",
   "runDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dc2terra-25-2025-05-01T03-05-09",
   "terraformDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_configs/580c0c7e-a188-422f-ba79-1ad482b96a19",

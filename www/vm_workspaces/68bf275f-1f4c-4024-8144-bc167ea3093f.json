@@ -1,0 +1,20 @@
+{
+  "id": "68bf275f-1f4c-4024-8144-bc167ea3093f",
+  "name": "lin2dv2terra-25",
+  "createdAt": "2025-05-01T14:53:14.524Z",
+  "config": {
+    "datacenter": "EBDC NONPROD",
+    "cluster": "np-cl60-lin",
+    "datastore_cluster": "",
+    "network": "",
+    "vm_name": "testnew",
+    "vm_template": "rhel9-template0314",
+    "vm_guest_id": "rhel9_64Guest",
+    "vm_cpu": "4",
+    "vm_memory": "32768",
+    "vm_disk_size": "200",
+    "vm_network_adapter_type": "vmxnet3"
+  },
+  "status": "created",
+  "lastUpdated": "2025-05-01T15:04:04.684Z"
+}
