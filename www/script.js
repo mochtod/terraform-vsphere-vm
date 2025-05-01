@@ -1614,4 +1614,126 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Test connections
     testConnectionsBtn.addEventListener('click', testConnections);
+    
+    // --- Additional Disks UI Logic ---
+const additionalDisksSection = document.getElementById('additional-disks-section');
+const additionalDisksList = document.getElementById('additional-disks-list');
+const addDiskBtn = document.getElementById('add-disk-btn');
+
+function getAdditionalDisksFromForm() {
+    const diskInputs = additionalDisksList.querySelectorAll('.additional-disk-input');
+    return Array.from(diskInputs).map(input => Number(input.value)).filter(v => !isNaN(v) && v > 0);
+}
+
+function updateAdditionalDisksUI(disks = []) {
+    additionalDisksList.innerHTML = '';
+    let total = 0;
+    disks.forEach((size, idx) => {
+        total += Number(size) || 0;
+        const diskDiv = document.createElement('div');
+        diskDiv.className = 'additional-disk-row';
+        diskDiv.innerHTML = `
+            <input type="number" class="additional-disk-input" min="1" max="1536" value="${size}" style="width:80px;" /> GB
+            <button type="button" class="remove-disk-btn btn btn-danger btn-small" title="Remove Disk">&times;</button>
+        `;
+        additionalDisksList.appendChild(diskDiv);
+        diskDiv.querySelector('.remove-disk-btn').addEventListener('click', () => {
+            disks.splice(idx, 1);
+            updateAdditionalDisksUI(disks);
+            triggerTfvarsUpdate();
+        });
+        diskDiv.querySelector('.additional-disk-input').addEventListener('input', (e) => {
+            disks[idx] = e.target.value;
+            updateAdditionalDisksUI(disks);
+            triggerTfvarsUpdate();
+        });
+    });
+    // Show total
+    const totalDiv = document.createElement('div');
+    totalDiv.className = 'additional-disks-total';
+    totalDiv.innerHTML = `<strong>Total:</strong> ${total} GB / 1536 GB`;
+    if (total > 1536) {
+        totalDiv.style.color = 'red';
+        totalDiv.innerHTML += ' <span style="color:red;">(Limit exceeded!)</span>';
+    }
+    additionalDisksList.appendChild(totalDiv);
+}
+
+addDiskBtn.addEventListener('click', () => {
+    const disks = getAdditionalDisksFromForm();
+    if (disks.reduce((a, b) => a + b, 0) >= 1536) return;
+    disks.push(1);
+    updateAdditionalDisksUI(disks);
+    triggerTfvarsUpdate();
+});
+
+function triggerTfvarsUpdate() {
+    if (typeof generateTfvars === 'function') generateTfvars();
+}
+
+// Patch generateTfvars to include additional_disks as a list
+const origGenerateTfvars = generateTfvars;
+generateTfvars = function() {
+    const form = document.getElementById('vm-form');
+    const formData = new FormData(form);
+    let tfvarsContent = `# Generated Terraform variables file\n`;
+    tfvarsContent += `# ${new Date().toISOString().split('T')[0]}\n\n`;
+    for (const [key, value] of formData.entries()) {
+        if (key !== 'vsphere_password' && key !== 'additional_disks') {
+            tfvarsContent += `${key} = "${value}"\n`;
+        }
+    }
+    // Add additional_disks as a list
+    const disks = getAdditionalDisksFromForm();
+    if (disks.length > 0) {
+        tfvarsContent += `additional_disks = [${disks.join(', ')}]\n`;
+    }
+    tfvarsContent += `# vsphere_password should be set as an environment variable TF_VAR_vsphere_password for security\n`;
+    document.getElementById('tfvars-code').textContent = tfvarsContent;
+    if (window.currentWorkspace) saveWorkspaceConfig();
+    return tfvarsContent;
+};
+
+// Patch saveWorkspaceConfig to include additional_disks
+const origSaveWorkspaceConfig = saveWorkspaceConfig;
+saveWorkspaceConfig = function() {
+    if (!window.currentWorkspace) return;
+    const form = document.getElementById('vm-form');
+    const formData = new FormData(form);
+    const config = {};
+    for (const [key, value] of formData.entries()) {
+        if (key !== 'vsphere_password' && key !== 'additional_disks') {
+            config[key] = value;
+        }
+    }
+    config.additional_disks = getAdditionalDisksFromForm();
+    fetch(`/api/workspaces/${window.currentWorkspace.id}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config })
+    })
+    .then(response => {
+        if (!response.ok) {
+            console.error('Error saving workspace config:', response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('Workspace config saved successfully');
+        } else {
+            console.error('Error saving workspace config:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving workspace config:', error);
+    });
+};
+
+// Load disks from workspace config if present
+if (window.currentWorkspace && window.currentWorkspace.config && Array.isArray(window.currentWorkspace.config.additional_disks)) {
+    updateAdditionalDisksUI(window.currentWorkspace.config.additional_disks);
+} else {
+    updateAdditionalDisksUI([]);
+}
 });

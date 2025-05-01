@@ -129,7 +129,7 @@ variable "additional_disks" {
   type        = list(number)
   default     = []
   validation {
-    condition     = (length(var.additional_disks) == 0 ? 0 : sum(var.additional_disks)) <= 1536
+    condition     = sum(var.additional_disks) <= 1536
     error_message = "The total size of all additional disks must not exceed 1536 GB (1.5TB)."
   }
 }

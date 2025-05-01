@@ -1,13 +1,13 @@
 {
   "vsphere": {
-    "user": "chr\\mochtodpa",
+    "user": "tf-builder@vsphere.local",
     "server": "virtualcenter.chrobinson.com",
-    "password": "FEug@qtO3U1sFAJ#R1"
+    "password": "R1pcl@w3556"
   },
   "netbox": {
     "url": "https://netbox.chrobinson.com",
     "token": "b714a966995e1eaf8b8ff919ebac3867321d50da",
     "prefix_id": "1292"
   },
-  "lastUpdated": "2025-05-01T14:51:37.708Z"
+  "lastUpdated": "2025-05-01T17:44:46.156Z"
 }
