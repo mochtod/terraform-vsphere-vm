@@ -11,12 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Fetch and populate datacenters on page load
     function initializeInfrastructureSelects() {
-        // We need vSphere connection info first
-        const vsphereServer = document.getElementById('vsphere_server').value;
-        const vsphereUser = document.getElementById('vsphere_user').value;
-        const vspherePassword = document.getElementById('vsphere_password').value;
+        // Get vSphere connection info from global settings or form
+        const vsphereSettings = getVSphereConnectionInfo();
         
-        if (!vsphereServer || !vsphereUser || !vspherePassword) {
+        if (!vsphereSettings.server || !vsphereSettings.user || !vsphereSettings.password) {
             // If connection details aren't available, use demo values
             populateSelectWithDemoData(datacenterSelect, [
                 { id: 'datacenter-1', name: 'EBDC NONPROD' },
@@ -169,6 +167,28 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
+    // Helper function to get vSphere connection information
+    function getVSphereConnectionInfo() {
+        // Get password from form (it's always input directly for security reasons)
+        const vspherePassword = document.getElementById('vsphere_password').value;
+        
+        // Try to get server and user from global settings if available
+        if (window.globalSettings && window.globalSettings.vsphere) {
+            return {
+                server: window.globalSettings.vsphere.server || '',
+                user: window.globalSettings.vsphere.user || '',
+                password: vspherePassword || ''
+            };
+        }
+        
+        // Fallback to form fields
+        return {
+            server: document.getElementById('vsphere_server')?.value || '',
+            user: document.getElementById('vsphere_user')?.value || '',
+            password: vspherePassword || ''
+        };
+    }
+    
     // Helper function to fetch infrastructure components from API
     async function fetchInfrastructureComponent(component, parent, selectElement) {
         try {
@@ -176,11 +196,9 @@ document.addEventListener('DOMContentLoaded', function() {
             selectElement.innerHTML = '<option value="">Loading...</option>';
             
             // Get vSphere connection details
-            const vsphereServer = document.getElementById('vsphere_server').value;
-            const vsphereUser = document.getElementById('vsphere_user').value;
-            const vspherePassword = document.getElementById('vsphere_password').value;
+            const vsphereSettings = getVSphereConnectionInfo();
             
-            if (!vsphereServer || !vsphereUser || !vspherePassword) {
+            if (!vsphereSettings.server || !vsphereSettings.user || !vsphereSettings.password) {
                 // Use demo data if no connection details
                 return populateSelectWithDemoData(selectElement, getDemoDataForComponent(component, parent));
             }
@@ -192,9 +210,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    vsphereServer,
-                    vsphereUser,
-                    vspherePassword,
+                    vsphereServer: vsphereSettings.server,
+                    vsphereUser: vsphereSettings.user,
+                    vspherePassword: vsphereSettings.password,
                     component,
                     parent
                 })
@@ -321,18 +339,36 @@ document.addEventListener('DOMContentLoaded', function() {
         return [];
     }
     
-    // Initialize dropdowns if we have connection details
-    // Check for vSphere connection details at startup
-    const vsphereServer = document.getElementById('vsphere_server').value;
-    const vsphereUser = document.getElementById('vsphere_user').value;
+    // Initialize dropdowns when global settings are loaded
+    // We'll set up an observer to wait for global settings to be loaded
     
-    if (vsphereServer && vsphereUser) {
-        // Initialize with demo data first
-        initializeInfrastructureSelects();
+    // Function to check if we can initialize (either from global settings or form fields)
+    function checkAndInitializeDropdowns() {
+        const settings = getVSphereConnectionInfo();
         
-        // Set initial load to false after a short delay
-        setTimeout(() => {
-            initialLoad = false;
-        }, 1000);
+        if (settings.server && settings.user) {
+            // Initialize the dropdowns
+            initializeInfrastructureSelects();
+            
+            // Set initial load to false after a short delay
+            setTimeout(() => {
+                initialLoad = false;
+            }, 1000);
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // Add an event listener for when global settings are loaded
+    document.addEventListener('settingsLoaded', function() {
+        checkAndInitializeDropdowns();
+    });
+    
+    // Try to initialize right away as well (in case settings are already loaded)
+    if (!checkAndInitializeDropdowns()) {
+        // If we don't have connection details, initialize with demo data
+        initializeInfrastructureSelects();
     }
 });

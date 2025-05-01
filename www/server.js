@@ -23,6 +23,10 @@ app.use('/api/vsphere', vsphereRouter);
 const vsphereInfraRouter = require('./vsphere-infra-api');
 app.use('/api/vsphere-infra', vsphereInfraRouter);
 
+// Register settings module
+const settings = require('./settings');
+settings.initializeSettings(); // Initialize settings on server start
+
 // Directory for storing tfvars files
 const TFVARS_DIR = path.join(__dirname, 'terraform_runs');
 if (!fs.existsSync(TFVARS_DIR)) {
@@ -153,17 +157,33 @@ app.post('/api/terraform/plan', async (req, res) => {
     try {
         const { vmVars, vspherePassword, workspaceId } = req.body;
         
+        // Get global settings to use if needed
+        const globalSettings = settings.getSettings();
+        
         // Add detailed logging to troubleshoot the request
         console.log('Plan request received with:', {
             hasVmVars: !!vmVars,
             hasPassword: !!vspherePassword,
-            workspaceId: workspaceId || 'not provided'
+            workspaceId: workspaceId || 'not provided',
+            hasGlobalSettings: !!globalSettings
         });
         
-        if (!vmVars || !vspherePassword) {
+        if (!vmVars) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Missing required parameters: ' + (!vmVars ? 'vmVars ' : '') + (!vspherePassword ? 'vspherePassword' : '')
+                error: 'Missing required parameters: vmVars'
+            });
+        }
+        
+        // Use password from request or fall back to global settings
+        const effectivePassword = vspherePassword || 
+                                 (globalSettings.vsphere && globalSettings.vsphere.password) || 
+                                 null;
+        
+        if (!effectivePassword) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing vSphere password. Please provide a password.'
             });
         }
 
@@ -196,10 +216,30 @@ app.post('/api/terraform/plan', async (req, res) => {
         const tfvarsPath = path.join(runDir, `${vmName}.tfvars`);
         let tfvarsContent = '';
         
+        // Add vSphere connection details from global settings
+        if (globalSettings && globalSettings.vsphere) {
+            // Include the server and user from global settings
+            if (globalSettings.vsphere.server) {
+                tfvarsContent += `vsphere_server = "${globalSettings.vsphere.server}"\n`;
+            }
+            if (globalSettings.vsphere.user) {
+                // Properly escape backslashes in the vSphere user
+                const escapedUser = globalSettings.vsphere.user.replace(/\\/g, '\\\\');
+                tfvarsContent += `vsphere_user = "${escapedUser}"\n`;
+            }
+        }
+        
         // Convert vmVars object to tfvars format
         for (const [key, value] of Object.entries(vmVars)) {
+            // Skip vsphere_server and vsphere_user if already set from global settings
+            if (key === 'vsphere_server' || key === 'vsphere_user') {
+                continue;
+            }
+            
             if (typeof value === 'string') {
-                tfvarsContent += `${key} = "${value}"\n`;
+                // Properly escape backslashes in string values
+                const escapedValue = value.replace(/\\/g, '\\\\');
+                tfvarsContent += `${key} = "${escapedValue}"\n`;
             } else {
                 tfvarsContent += `${key} = ${value}\n`;
             }
@@ -213,7 +253,7 @@ app.post('/api/terraform/plan', async (req, res) => {
         
         // Set up environment for terraform
         const env = {
-            'TF_VAR_vsphere_password': vspherePassword
+            'TF_VAR_vsphere_password': effectivePassword
         };
 
         // Run terraform init in the workspace directory
@@ -263,8 +303,23 @@ app.post('/api/terraform/apply', async (req, res) => {
     try {
         const { planPath, vspherePassword, runDir, workspaceId } = req.body;
         
+        // Get global settings
+        const globalSettings = settings.getSettings();
+        
         if (!planPath || !workspaceId) {
             return res.status(400).json({ error: 'Missing required parameters' });
+        }
+        
+        // Use password from request or fall back to global settings
+        const effectivePassword = vspherePassword || 
+                                (globalSettings.vsphere && globalSettings.vsphere.password) || 
+                                null;
+        
+        if (!effectivePassword) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing vSphere password. Please provide a password.'
+            });
         }
 
         // Check if workspace exists
@@ -301,7 +356,7 @@ app.post('/api/terraform/apply', async (req, res) => {
 
         // Set up environment for terraform
         const env = {
-            'TF_VAR_vsphere_password': vspherePassword
+            'TF_VAR_vsphere_password': effectivePassword
         };
 
         // Create a status file to track this deployment
@@ -733,6 +788,51 @@ app.delete('/api/workspaces/:id', (req, res) => {
     } catch (error) {
         console.error('Error deleting workspace:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Settings API endpoints
+app.get('/api/settings', (req, res) => {
+    try {
+        const currentSettings = settings.getSettings();
+        res.json({ 
+            success: true, 
+            settings: currentSettings 
+        });
+    } catch (error) {
+        console.error('Error getting settings:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+app.post('/api/settings', (req, res) => {
+    try {
+        const { vsphere, netbox } = req.body;
+        
+        if (!vsphere && !netbox) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'No settings provided to update' 
+            });
+        }
+        
+        // Update settings
+        const updatedSettings = settings.updateSettings({ vsphere, netbox });
+        
+        res.json({ 
+            success: true, 
+            message: 'Settings updated successfully',
+            settings: updatedSettings
+        });
+    } catch (error) {
+        console.error('Error updating settings:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
     }
 });
 

@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Global variables to track current workspace
     window.currentWorkspace = null;
     window.workspaces = [];
+    window.globalSettings = null;
 
     // Tab switching functionality
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -1383,4 +1384,234 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize deployed VMs tab
     addDeployedVMsTab();
+    
+    // Settings Modal Functionality
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsBtn = document.getElementById('close-settings-modal');
+    const saveSettingsBtn = document.getElementById('save-settings');
+    const testConnectionsBtn = document.getElementById('test-connections');
+    
+    // Load global settings when the page loads
+    loadGlobalSettings();
+    
+    // Function to load global settings from the server
+    function loadGlobalSettings() {
+        fetch('/api/settings')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Store settings in global variable
+                    window.globalSettings = data.settings;
+                    
+                    // Apply settings to form fields
+                    applyGlobalSettings();
+                    
+                    console.log('Global settings loaded successfully');
+                    
+                    // Dispatch an event to notify that settings are loaded
+                    document.dispatchEvent(new CustomEvent('settingsLoaded', {
+                        detail: { settings: window.globalSettings }
+                    }));
+                } else {
+                    console.error('Error loading global settings:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading global settings:', error.message);
+            });
+    }
+    
+    // Function to apply global settings to form fields
+    function applyGlobalSettings() {
+        if (!window.globalSettings) return;
+        
+        const settings = window.globalSettings;
+        
+        // Apply vSphere settings to the form if no workspace is selected
+        if (!window.currentWorkspace && settings.vsphere) {
+            const vSphereFields = {
+                vsphere_user: 'settings_vsphere_user',
+                vsphere_server: 'settings_vsphere_server'
+            };
+            
+            // Apply to main form fields if they exist
+            for (const [formKey, settingKey] of Object.entries(vSphereFields)) {
+                const formField = document.getElementById(formKey);
+                const settingField = document.getElementById(settingKey);
+                
+                if (formField && settingField && settings.vsphere[formKey.replace('vsphere_', '')]) {
+                    formField.value = settings.vsphere[formKey.replace('vsphere_', '')];
+                }
+            }
+        }
+        
+        // Apply to settings modal fields
+        if (settings.vsphere) {
+            if (settings.vsphere.user) {
+                document.getElementById('settings_vsphere_user').value = settings.vsphere.user;
+            }
+            if (settings.vsphere.server) {
+                document.getElementById('settings_vsphere_server').value = settings.vsphere.server;
+            }
+            // Don't set password in UI for security reasons
+        }
+        
+        if (settings.netbox) {
+            if (settings.netbox.url) {
+                document.getElementById('settings_netbox_url').value = settings.netbox.url;
+            }
+            if (settings.netbox.prefix_id) {
+                document.getElementById('settings_netbox_prefix_id').value = settings.netbox.prefix_id;
+            }
+            // Don't set token in UI for security reasons
+        }
+    }
+    
+    // Function to save global settings
+    function saveGlobalSettings() {
+        const settings = {
+            vsphere: {
+                user: document.getElementById('settings_vsphere_user').value,
+                server: document.getElementById('settings_vsphere_server').value,
+                password: document.getElementById('settings_vsphere_password').value
+            },
+            netbox: {
+                url: document.getElementById('settings_netbox_url').value,
+                token: document.getElementById('settings_netbox_token').value,
+                prefix_id: document.getElementById('settings_netbox_prefix_id').value
+            }
+        };
+        
+        // Save to server
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Update global settings
+                window.globalSettings = data.settings;
+                
+                // Apply to form fields
+                applyGlobalSettings();
+                
+                // Show success message
+                showNotification('Global settings saved successfully', 'success');
+                
+                // Close modal
+                settingsModal.style.display = 'none';
+                
+                // Apply to main form fields
+                if (!window.currentWorkspace) {
+                    if (settings.vsphere.user) {
+                        document.getElementById('vsphere_user').value = settings.vsphere.user;
+                    }
+                    if (settings.vsphere.server) {
+                        document.getElementById('vsphere_server').value = settings.vsphere.server;
+                    }
+                    if (settings.vsphere.password) {
+                        document.getElementById('vsphere_password').value = settings.vsphere.password;
+                    }
+                }
+            } else {
+                showNotification(`Error saving settings: ${data.error}`, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification(`Error saving settings: ${error.message}`, 'error');
+        });
+    }
+    
+    // Function to test connections
+    function testConnections() {
+        const settings = {
+            vsphere: {
+                user: document.getElementById('settings_vsphere_user').value,
+                server: document.getElementById('settings_vsphere_server').value,
+                password: document.getElementById('settings_vsphere_password').value
+            },
+            netbox: {
+                url: document.getElementById('settings_netbox_url').value,
+                token: document.getElementById('settings_netbox_token').value,
+                prefix_id: document.getElementById('settings_netbox_prefix_id').value
+            }
+        };
+        
+        // Show loading notification
+        showNotification('Testing connections...', 'default');
+        
+        // For now, just validate that values are provided
+        // In a real implementation, you would test these connections via API calls
+        
+        const missingVsphereFields = [];
+        if (!settings.vsphere.user) missingVsphereFields.push('User');
+        if (!settings.vsphere.server) missingVsphereFields.push('Server');
+        if (!settings.vsphere.password) missingVsphereFields.push('Password');
+        
+        const missingNetboxFields = [];
+        if (!settings.netbox.url) missingNetboxFields.push('URL');
+        if (!settings.netbox.token) missingNetboxFields.push('Token');
+        if (!settings.netbox.prefix_id) missingNetboxFields.push('Prefix ID');
+        
+        if (missingVsphereFields.length > 0 || missingNetboxFields.length > 0) {
+            let message = 'Missing required fields:';
+            if (missingVsphereFields.length > 0) {
+                message += `\nVSphere: ${missingVsphereFields.join(', ')}`;
+            }
+            if (missingNetboxFields.length > 0) {
+                message += `\nNetbox: ${missingNetboxFields.join(', ')}`;
+            }
+            showNotification(message, 'error');
+        } else {
+            showNotification('All connection parameters provided. Ready to save.', 'success');
+        }
+    }
+    
+    // Open settings modal - both from header button and from form link
+    settingsBtn.addEventListener('click', openSettingsModal);
+    document.getElementById('open-settings-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        openSettingsModal();
+    });
+    
+    function openSettingsModal() {
+        // Ensure fields are populated with current settings
+        applyGlobalSettings();
+        
+        // Show the modal
+        settingsModal.style.display = 'block';
+    }
+    
+    // Close settings modal
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+    
+    // Close modal if clicked outside
+    window.addEventListener('click', (event) => {
+        if (event.target === settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    });
+    
+    // Save settings
+    saveSettingsBtn.addEventListener('click', saveGlobalSettings);
+    
+    // Test connections
+    testConnectionsBtn.addEventListener('click', testConnections);
 });

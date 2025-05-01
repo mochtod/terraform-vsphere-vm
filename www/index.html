@@ -15,6 +15,9 @@
                 <button id="manage-vms-btn" class="btn btn-secondary">
                     <i class="fas fa-th-large"></i> Manage VM Workspaces
                 </button>
+                <button id="settings-btn" class="btn btn-secondary">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
                 <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
                     <i class="fas fa-moon"></i>
                 </button>
@@ -24,22 +27,8 @@
         <main>
             <div class="form-container">
                 <form id="vm-form">
+                    <!-- vSphere connection settings moved to global settings -->
                     <div class="form-section">
-                        <h2>vSphere Connection</h2>
-                        <div class="form-group">
-                            <label for="vsphere_user">vSphere User</label>
-                            <input type="text" id="vsphere_user" name="vsphere_user" value="chr\\mochtodpa" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="vsphere_password">vSphere Password</label>
-                            <input type="password" id="vsphere_password" name="vsphere_password" placeholder="Enter password (will be set as environment variable)" required>
-                            <small>This will be securely set as an environment variable.</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="vsphere_server">vSphere Server</label>
-                            <input type="text" id="vsphere_server" name="vsphere_server" value="virtualcenter.chrobinson.com" required>
-                        </div>
-                    </div>                    <div class="form-section">
                         <h2>Infrastructure Location</h2>
                         <div class="form-group">
                             <label for="datacenter">Datacenter</label>
@@ -105,6 +94,16 @@
                                 <option value="e1000">e1000</option>
                                 <option value="e1000e">e1000e</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>Connection Credentials</h2>
+                        <p>The vSphere credentials are managed in <a href="#" id="open-settings-link">Global Settings</a>.</p>
+                        <div class="form-group">
+                            <label for="vsphere_password">vSphere Password (for this operation)</label>
+                            <input type="password" id="vsphere_password" name="vsphere_password" placeholder="Enter password for this operation" required>
+                            <small>Required for plan/apply operations but not stored in your workspace</small>
                         </div>
                     </div>
 
@@ -184,7 +183,64 @@
                     <p>Loading workspaces...</p>
                 </div>
             </div>
-        </div>    </div>    <script src="script.js"></script>
+        </div>    
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> Global Settings</h2>
+                <button id="close-settings-modal" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>vSphere Connection</h3>
+                    <div class="form-group">
+                        <label for="settings_vsphere_user">vSphere User</label>
+                        <input type="text" id="settings_vsphere_user" name="settings_vsphere_user" placeholder="Domain\\username">
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_vsphere_password">vSphere Password</label>
+                        <input type="password" id="settings_vsphere_password" name="settings_vsphere_password" placeholder="Enter password">
+                        <small>Password will be securely stored on the server.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_vsphere_server">vSphere Server</label>
+                        <input type="text" id="settings_vsphere_server" name="settings_vsphere_server" placeholder="virtualcenter.example.com">
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Netbox Configuration</h3>
+                    <div class="form-group">
+                        <label for="settings_netbox_url">Netbox URL</label>
+                        <input type="text" id="settings_netbox_url" name="settings_netbox_url" placeholder="https://netbox.example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_netbox_token">API Token</label>
+                        <input type="password" id="settings_netbox_token" name="settings_netbox_token" placeholder="Enter Netbox API token">
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_netbox_prefix_id">Prefix ID</label>
+                        <input type="text" id="settings_netbox_prefix_id" name="settings_netbox_prefix_id" placeholder="1234">
+                        <small>The ID of the IP prefix in Netbox</small>
+                    </div>
+                </div>
+                
+                <div class="settings-actions">
+                    <button id="save-settings" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Global Settings
+                    </button>
+                    <button id="test-connections" class="btn btn-secondary">
+                        <i class="fas fa-plug"></i> Test Connections
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
     <script src="vm-status.js"></script>
     <script src="infrastructure-dropdowns.js"></script>
 </body>

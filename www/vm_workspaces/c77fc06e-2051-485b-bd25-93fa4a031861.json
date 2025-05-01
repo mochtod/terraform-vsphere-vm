@@ -3,13 +3,8 @@
   "name": "lin2dv2terr-22",
   "createdAt": "2025-05-01T00:52:35.277Z",
   "config": {
-    "vsphere_user": "chr\\\\mochtodpa",
-    "vsphere_server": "virtualcenter.chrobinson.com",
     "datacenter": "EBDC NONPROD",
-    "cluster": "np-cl60-lin",
-    "datastore_cluster": "np-cl60-dsc",
-    "network": "np-lin-vds-989-linux",
-    "vm_name": "lin2dv2terra-23",
+    "vm_name": "lin2dv2terra-25",
     "vm_template": "rhel9-template0314",
     "vm_guest_id": "rhel9_64Guest",
     "vm_cpu": "4",
@@ -18,7 +13,7 @@
     "vm_network_adapter_type": "vmxnet3"
   },
   "status": "deployed",
-  "lastUpdated": "2025-05-01T01:11:30.174Z",
+  "lastUpdated": "2025-05-01T02:06:35.925Z",
   "planPath": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terr-22-2025-05-01T01-07-26/lin2dv2terr-22.tfplan",
   "runDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terr-22-2025-05-01T01-07-26",
   "terraformDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_configs/c77fc06e-2051-485b-bd25-93fa4a031861",
