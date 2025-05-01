@@ -3,23 +3,18 @@
   "name": "lin2dv2terra-28",
   "createdAt": "2025-05-01T17:59:46.892Z",
   "config": {
-    "datacenter": "EBDC NONPROD",
-    "cluster": "np-cl60-lin",
-    "datastore_cluster": "np-cl60-dsc",
-    "network": "np-lin-vds-989-linux",
-    "vm_name": "lin2dv2terra-28",
+    "datacenter": "",
+    "vm_name": "lin2dv2terra-29",
     "vm_template": "rhel9-template0314",
     "vm_guest_id": "rhel9_64Guest",
     "vm_cpu": "4",
     "vm_memory": "32768",
     "vm_disk_size": "100",
     "vm_network_adapter_type": "vmxnet3",
-    "additional_disks": [
-      1000
-    ]
+    "additional_disks": []
   },
   "status": "deployed",
-  "lastUpdated": "2025-05-01T17:59:47.019Z",
+  "lastUpdated": "2025-05-01T18:33:17.568Z",
   "planPath": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terra-28-2025-05-01T17-59-59/lin2dv2terra-28.tfplan",
   "runDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terra-28-2025-05-01T17-59-59",
   "terraformDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_configs/68098c43-51cc-41a3-8206-bfab78d29c5f",

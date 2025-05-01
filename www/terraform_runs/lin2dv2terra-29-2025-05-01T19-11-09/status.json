@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "startTime": "2025-05-01T19:11:52.665Z",
+  "planPath": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terra-29-2025-05-01T19-11-09/lin2dv2terra-29.tfplan",
+  "logs": [
+    {
+      "time": "2025-05-01T19:13:35.001Z",
+      "message": "Terraform apply completed successfully"
+    }
+  ],
+  "endTime": "2025-05-01T19:13:35.001Z",
+  "output": "\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Destroying... [id=42366f58-3a66-ed58-8906-24f9f779c0e2]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Destruction complete after 8s\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Creating...\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [10s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [20s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [30s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [40s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [50s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [1m0s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [1m10s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still creating... [1m20s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Creation complete after 1m29s [id=4236471b-58db-7c58-de82-634c9a2e1cb0]\u001b[0m\n\u001b[0m\u001b[1m\u001b[32m\nApply complete! Resources: 1 added, 0 changed, 1 destroyed.\n\u001b[0m\u001b[0m\u001b[1m\u001b[32m\nOutputs:\n\n\u001b[0mvm_id = \"4236471b-58db-7c58-de82-634c9a2e1cb0\"\nvm_ip = \"10.74.184.53\"\nvm_name = \"lin2dv2terra-29\"\n"
+}

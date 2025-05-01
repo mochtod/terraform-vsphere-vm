@@ -17,6 +17,10 @@ const DEFAULT_SETTINGS = {
     token: "",
     prefix_id: "1292"
   },
+  aap: {
+    api_url: "https://ansibleaap.chrobinson.com",
+    api_token: ""
+  },
   lastUpdated: new Date().toISOString()
 };
 
@@ -25,6 +29,46 @@ function initializeSettings() {
   if (!fs.existsSync(SETTINGS_FILE_PATH)) {
     fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(DEFAULT_SETTINGS, null, 2));
     console.log('Settings file initialized with default values');
+  } else {
+    // File exists, but ensure it has all required structure fields
+    try {
+      const currentSettings = JSON.parse(fs.readFileSync(SETTINGS_FILE_PATH, 'utf8'));
+      let needsUpdate = false;
+      
+      // Check for missing top-level sections and add them if needed
+      for (const section of ['vsphere', 'netbox', 'aap']) {
+        if (!currentSettings[section]) {
+          currentSettings[section] = DEFAULT_SETTINGS[section];
+          needsUpdate = true;
+          console.log(`Added missing section '${section}' to settings`);
+        }
+      }
+      
+      // Ensure AAP section has all required fields
+      if (currentSettings.aap) {
+        if (!currentSettings.aap.api_url) {
+          currentSettings.aap.api_url = DEFAULT_SETTINGS.aap.api_url;
+          needsUpdate = true;
+          console.log('Added missing AAP API URL to settings');
+        }
+        
+        if (!currentSettings.aap.api_token) {
+          currentSettings.aap.api_token = DEFAULT_SETTINGS.aap.api_token;
+          needsUpdate = true;
+          console.log('Added missing AAP API token to settings');
+        }
+      }
+      
+      // Update file if changes were made
+      if (needsUpdate) {
+        currentSettings.lastUpdated = new Date().toISOString();
+        fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(currentSettings, null, 2));
+        console.log('Updated settings file with missing fields');
+      }
+    } catch (error) {
+      console.error('Error reading or updating settings file:', error);
+      // Don't overwrite existing file in case of error
+    }
   }
 }
 
@@ -44,13 +88,26 @@ function getSettings() {
 function updateSettings(newSettings) {
   try {
     const currentSettings = getSettings();
-    const updatedSettings = {
+    let updatedSettings = {
       ...currentSettings,
-      ...newSettings,
       lastUpdated: new Date().toISOString()
     };
     
+    // Deep merge for nested objects
+    if (newSettings.vsphere) {
+      updatedSettings.vsphere = { ...currentSettings.vsphere, ...newSettings.vsphere };
+    }
+    
+    if (newSettings.netbox) {
+      updatedSettings.netbox = { ...currentSettings.netbox, ...newSettings.netbox };
+    }
+    
+    if (newSettings.aap) {
+      updatedSettings.aap = { ...currentSettings.aap, ...newSettings.aap };
+    }
+    
     fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(updatedSettings, null, 2));
+    console.log('Settings updated successfully');
     return updatedSettings;
   } catch (error) {
     console.error('Error updating settings file:', error);

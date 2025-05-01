@@ -1471,6 +1471,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // Don't set token in UI for security reasons
         }
+        
+        if (settings.aap) {
+            if (settings.aap.api_url) {
+                document.getElementById('settings_aap_api_url').value = settings.aap.api_url;
+            }
+            // Don't set token in UI for security reasons
+        }
     }
     
     // Function to save global settings
@@ -1485,6 +1492,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 url: document.getElementById('settings_netbox_url').value,
                 token: document.getElementById('settings_netbox_token').value,
                 prefix_id: document.getElementById('settings_netbox_prefix_id').value
+            },
+            aap: {
+                api_url: document.getElementById('settings_aap_api_url').value,
+                api_token: document.getElementById('settings_aap_api_token').value
             }
         };
         

@@ -398,6 +398,9 @@ app.post('/api/terraform/apply', async (req, res) => {
         workspace.status = 'deployed';
         workspace.lastDeployed = new Date().toISOString();
         
+        // Note: AAP job launch is now handled through the VM Customization UI
+        // instead of being triggered automatically here
+
         fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
 
         res.json({
@@ -877,6 +880,129 @@ app.get('/api/deployed-vms', (req, res) => {
         });
     } catch (error) {
         console.error('Error getting deployed VMs:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// --- Ansible AAP API endpoint ---
+app.post('/api/aap/launch', async (req, res) => {
+    try {
+        const { target, templateId, workspaceId } = req.body;
+        if (!target) {
+            return res.status(400).json({ success: false, error: 'Missing target (VM IP or hostname)' });
+        }
+        
+        const globalSettings = settings.getSettings();
+        if (!globalSettings.aap || !globalSettings.aap.api_url || !globalSettings.aap.api_token) {
+            return res.status(400).json({ success: false, error: 'AAP API credentials not configured' });
+        }
+        
+        // Use provided template ID or fall back to default
+        const jobTemplateId = templateId || globalSettings.aap.default_template_id || 72;
+        
+        // Get API URL and token
+        const apiUrl = globalSettings.aap.api_url.replace(/\/$/, '');
+        const apiToken = globalSettings.aap.api_token;
+        
+        // Launch the job template
+        const launchUrl = `${apiUrl}/api/v2/job_templates/${jobTemplateId}/launch/`;
+        const payload = {
+            extra_vars: { target }
+        };
+                // Use built-in https module instead of node-fetch
+                const https = require('https');
+                const url = new URL(launchUrl);
+                
+                // Create a promise to handle the HTTP request
+                const data = await new Promise((resolve, reject) => {
+                    const requestOptions = {
+                        hostname: url.hostname,
+                        path: url.pathname + url.search,
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiToken}`
+                        },
+                        rejectUnauthorized: false // For self-signed certificates
+                    };
+                    
+                    const req = https.request(requestOptions, (res) => {
+                        let responseData = '';
+                        
+                        res.on('data', (chunk) => {
+                            responseData += chunk;
+                        });
+                        
+                        res.on('end', () => {
+                            try {
+                                const parsedData = JSON.parse(responseData);
+                                resolve({
+                                    ok: res.statusCode >= 200 && res.statusCode < 300,
+                                    status: res.statusCode,
+                                    data: parsedData
+                                });
+                            } catch (error) {
+                                reject(new Error(`Failed to parse response: ${error.message}`));
+                            }
+                        });
+                    });
+                    
+                    req.on('error', (error) => {
+                        reject(error);
+                    });
+                    
+                    // Write request body
+                    req.write(JSON.stringify(payload));
+                    req.end();
+                });
+                
+                const response = {
+                    ok: data.ok,
+                    status: data.status
+                };
+                
+                // Extract the actual response data
+                const responseData = data.data;
+        
+        if (!response.ok) {
+            return res.status(response.status).json({ 
+                success: false, 
+                error: data.detail || data.error || 'Failed to launch AAP job', 
+                data 
+            });
+        }
+        
+        // Store job launch info in workspace if workspace ID is provided
+        if (workspaceId) {
+            try {
+                const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+                if (fs.existsSync(workspacePath)) {
+                    const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+                    
+                    workspace.aapJob = {
+                        launched: true,
+                        time: new Date().toISOString(),
+                        job: data,
+                        templateId: jobTemplateId,
+                        status: 'launched'
+                    };
+                    
+                    fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                }
+            } catch (wsError) {
+                console.error('Error updating workspace with AAP job info:', wsError);
+                // Continue anyway since the job was launched successfully
+            }
+        }
+        
+        // Return job info for frontend
+        res.json({ 
+            success: true, 
+            job: data,
+            templateId: jobTemplateId
+        });
+    } catch (error) {
+        console.error('Error launching AAP job:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

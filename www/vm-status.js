@@ -42,36 +42,60 @@ document.addEventListener('DOMContentLoaded', function() {
                         vspherePassword
                     })
                 });
-                
                 const data = await response.json();
-                
                 if (!data.success) {
                     showVMHealthError(`Error connecting to vSphere: ${data.error}`);
                     return;
                 }
-                
-                // Check if we got any VMs
                 if (!data.vms || data.vms.length === 0) {
                     showVMHealthError("No virtual machines found in the vSphere environment.");
                     return;
                 }
-                  // Find the specific VM that matches our current workspace
+                // Find the specific VM that matches our current workspace
                 const result = findVMByNameOrIp(data.vms, vmName);
-                
+                let vmToCheck = null;
                 if (result.exactMatch) {
-                    // If we found an exact match, display it
-                    displayVMHealth(result.exactMatch);
+                    vmToCheck = result.exactMatch;
                 } else if (result.possibleMatches && result.possibleMatches.length > 0) {
-                    // If we have possible matches, display them for selection
-                    displayPossibleMatches(result.possibleMatches, vmName);
-                } else {
-                    // No matches found
-                    showVMHealthError(`VM "${vmName}" not found in vSphere. It may not be deployed yet.`);
-                    
-                    // Display a manual VM search option
-                    displayManualSearchOption(data.vms);
+                    vmToCheck = result.possibleMatches[0];
                 }
-                
+                if (!vmToCheck) {
+                    showVMHealthError(`VM "${vmName}" not found in vSphere. It may not be deployed yet.`);
+                    displayManualSearchOption(data.vms);
+                    return;
+                }
+                // Display vSphere health info
+                displayVMHealth(vmToCheck);
+                // Call backend to launch AAP job and get output
+                vmHealthMetrics.innerHTML += '<div class="vm-metrics-title">Ansible AAP Job Launch</div><div id="aap-job-output">Launching job...</div>';
+                try {
+                    const aapResp = await fetch('/api/aap/launch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ target: vmToCheck.GuestIPAddress || vmToCheck.Name })
+                    });
+                    const aapData = await aapResp.json();
+                    const outputDiv = document.getElementById('aap-job-output');
+                    let statusLight = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ffc107;margin-right:6px;vertical-align:middle;" title="Launching"></span>';
+                    if (aapData.success) {
+                        // Show only job ID, status, and launch info with light
+                        const jobId = aapData.job.id || aapData.job.job || 'N/A';
+                        const status = aapData.job.status || 'launched';
+                        if (status === 'successful' || status === 'launched') {
+                            statusLight = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#28a745;margin-right:6px;vertical-align:middle;" title="Success"></span>';
+                        } else if (status === 'failed' || status === 'error') {
+                            statusLight = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dc3545;margin-right:6px;vertical-align:middle;" title="Failure"></span>';
+                        }
+                        outputDiv.innerHTML = `${statusLight}<b>Job Launched:</b> Job ID: <code>${jobId}</code> Status: <code>${status}</code>`;
+                    } else {
+                        statusLight = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dc3545;margin-right:6px;vertical-align:middle;" title="Failure"></span>';
+                        outputDiv.innerHTML = `${statusLight}<span class="error-message">AAP Error: ${aapData.error || 'Unknown error'}</span>`;
+                    }
+                } catch (aapErr) {
+                    const outputDiv = document.getElementById('aap-job-output');
+                    const statusLight = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dc3545;margin-right:6px;vertical-align:middle;" title="Failure"></span>';
+                    outputDiv.innerHTML = `${statusLight}<span class="error-message">AAP Error: ${aapErr.message}</span>`;
+                }
             } catch (error) {
                 console.error('Error fetching VM data:', error);
                 showVMHealthError(`Error fetching VM data: ${error.message}`);

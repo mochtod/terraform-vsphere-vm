@@ -9,5 +9,9 @@
     "token": "b714a966995e1eaf8b8ff919ebac3867321d50da",
     "prefix_id": "1292"
   },
-  "lastUpdated": "2025-05-01T17:55:39.738Z"
+  "aap": {
+    "api_url": "https://ansibleaap.chrobinson.com",
+    "api_token": "tIe1xZ3x50QFkqdgxNtcqTjAH4cU9A"
+  },
+  "lastUpdated": "2025-05-01T19:24:56.798Z"
 }

@@ -133,6 +133,7 @@
                     <button class="tab-btn active" data-tab="tfvars">tfvars File</button>
                     <button class="tab-btn" data-tab="plan">Plan Output</button>
                     <button class="tab-btn" data-tab="apply">Apply Output</button>
+                    <button class="tab-btn" data-tab="vm-customization">VM Customization</button>
                     <button class="tab-btn" data-tab="deployed-vms">VM Health</button>
                 </div>
                 <div class="tab-content">                <div id="tfvars-output" class="tab-panel active">
@@ -146,7 +147,34 @@
                     </div>
                     <div id="apply-output" class="tab-panel">
                         <pre><code id="apply-code">// Terraform apply output will appear here</code></pre>
-                    </div>                    <div id="deployed-vms-output" class="tab-panel">
+                    </div>
+                    <div id="vm-customization-output" class="tab-panel">
+                        <div class="vm-customization-container">
+                            <div class="vm-details">
+                                <h3>VM Details</h3>
+                                <div id="vm-customization-details">
+                                    <p>Deploy a VM first to enable customization options.</p>
+                                </div>
+                            </div>
+                            <div class="aap-job-section">
+                                <h3>Ansible Automation Platform (AAP) Jobs</h3>
+                                <div class="form-group">
+                                    <label for="aap-job-template">Job Template</label>
+                                    <select id="aap-job-template">
+                                        <option value="">Select a job template</option>
+                                        <!-- Templates will be populated from settings -->
+                                    </select>
+                                </div>
+                                <button id="launch-aap-job" class="btn btn-primary" disabled>
+                                    <i class="fas fa-play-circle"></i> Launch Job
+                                </button>
+                            </div>
+                            <div id="aap-job-results">
+                                <!-- Job results will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div id="deployed-vms-output" class="tab-panel">
                         <div class="deployed-vms-controls">
                             <button id="refresh-vms-btn" class="btn btn-secondary">
                                 <i class="fas fa-sync-alt"></i> Check VM Health
@@ -238,6 +266,19 @@
                     </div>
                 </div>
                 
+                <div class="settings-section">
+                    <h3>Ansible AAP Configuration</h3>
+                    <div class="form-group">
+                        <label for="settings_aap_api_url">AAP API URL</label>
+                        <input type="text" id="settings_aap_api_url" name="settings_aap_api_url" placeholder="https://ansibleaap.chrobinson.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_aap_api_token">API Token</label>
+                        <input type="password" id="settings_aap_api_token" name="settings_aap_api_token" placeholder="Enter AAP API token">
+                        <small>The API token is stored securely on the server.</small>
+                    </div>
+                </div>
+
                 <div class="settings-actions">
                     <button id="save-settings" class="btn btn-primary">
                         <i class="fas fa-save"></i> Save Global Settings
@@ -250,8 +291,11 @@
         </div>
     </div>
     
+    <link rel="stylesheet" href="vm-customization.js.css">
     <script src="script.js"></script>
     <script src="vm-status.js"></script>
+    <script src="vm-customization.js"></script>
+    <script src="job-templates.js"></script>
     <script src="infrastructure-dropdowns.js"></script>
     <script src="vm-templates.js"></script>
 </body>
