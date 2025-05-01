@@ -221,13 +221,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear existing options except the first one
         selectElement.innerHTML = '<option value="">Select an option</option>';
         
-        // Add new options
-        data.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.id;
-            option.textContent = item.name;
-            selectElement.appendChild(option);
-        });
+            // Add new options
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.name; // Use name as value, not ID
+                option.textContent = item.name;
+                option.dataset.id = item.id; // Store ID as data attribute if needed
+                selectElement.appendChild(option);
+            });
         
         // Enable the select element
         selectElement.disabled = false;
@@ -241,8 +242,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add demo options
         data.forEach(item => {
             const option = document.createElement('option');
-            option.value = item.id;
+            option.value = item.name; // Use name as value, not ID
             option.textContent = item.name;
+            option.dataset.id = item.id; // Store ID as data attribute if needed
             selectElement.appendChild(option);
         });
         

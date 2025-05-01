@@ -87,9 +87,10 @@ router.post('/components', async (req, res) => {
         
         let responseData;
         
-        // Return the appropriate component data based on request
+                // Return the appropriate component data based on request
         switch (component) {
             case 'datacenters':
+                // Ensure we're returning the actual datacenter names in the data
                 responseData = infrastructureData.datacenters;
                 break;
             case 'clusters':
