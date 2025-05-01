@@ -48,4 +48,20 @@ resource "vsphere_virtual_machine" "vm" {
       ipv4_gateway = var.ipv4_gateway
     }
   }
+
+  provisioner "remote-exec" {
+    connection {
+      type        = "ssh"
+      user        = "root"
+      password    = "C9msV+s3"
+      host        = self.default_ip_address
+      timeout     = "5m"
+      # Optionally, you can add 'port = 22' if needed
+      # Optionally, you can add 'agent = false' if not using SSH agent
+    }
+    inline = [
+      "logger 'HELLO WORLD from TERRAFORM'",
+      "for i in {1..30}; do echo 'HELLO WORLD from TERRAFORM'; done"
+    ]
+  }
 }

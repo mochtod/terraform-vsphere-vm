@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "startTime": "2025-05-01T17:57:27.265Z",
+  "planPath": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terra-27-2025-05-01T17-56-31/lin2dv2terra-27.tfplan",
+  "logs": [
+    {
+      "time": "2025-05-01T17:57:34.545Z",
+      "message": "Terraform apply completed successfully"
+    }
+  ],
+  "endTime": "2025-05-01T17:57:34.545Z",
+  "output": "\u001b[0m\u001b[1m\u001b[32m\nApply complete! Resources: 0 added, 0 changed, 0 destroyed.\n\u001b[0m\u001b[0m\u001b[1m\u001b[32m\nOutputs:\n\n\u001b[0mvm_id = \"4236e8cb-a95a-681a-e276-69b49c43c83f\"\nvm_ip = \"10.74.184.49\"\nvm_name = \"lin2dv2terra-27\"\n"
+}
