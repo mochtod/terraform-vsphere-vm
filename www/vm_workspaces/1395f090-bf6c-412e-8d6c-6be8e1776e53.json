@@ -4,6 +4,9 @@
   "createdAt": "2025-05-01T18:33:17.551Z",
   "config": {
     "datacenter": "EBDC NONPROD",
+    "cluster": "np-cl60-lin",
+    "datastore_cluster": "np-cl60-dsc",
+    "network": "np-lin-vds-989-linux",
     "vm_name": "lin2dv2terra-29",
     "vm_template": "rhel9-template0314",
     "vm_guest_id": "rhel9_64Guest",
@@ -14,7 +17,7 @@
     "additional_disks": []
   },
   "status": "deployed",
-  "lastUpdated": "2025-05-01T19:26:27.669Z",
+  "lastUpdated": "2025-05-02T12:55:50.277Z",
   "planPath": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terra-29-2025-05-01T19-11-09/lin2dv2terra-29.tfplan",
   "runDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_runs/lin2dv2terra-29-2025-05-01T19-11-09",
   "terraformDir": "/mnt/c/Users/mochtod/Desktop/TerraSphere/terraform-vsphere-vm/www/terraform_configs/1395f090-bf6c-412e-8d6c-6be8e1776e53",
