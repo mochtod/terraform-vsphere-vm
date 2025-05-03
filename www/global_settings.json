@@ -6,12 +6,12 @@
   },
   "netbox": {
     "url": "https://netbox.chrobinson.com",
-    "token": "b714a966995e1eaf8b8ff919ebac3867321d50da",
+    "token": "",
     "prefix_id": "1292"
   },
   "aap": {
     "api_url": "https://ansibleaap.chrobinson.com",
     "api_token": "tIe1xZ3x50QFkqdgxNtcqTjAH4cU9A"
   },
-  "lastUpdated": "2025-05-01T19:24:56.798Z"
+  "lastUpdated": "2025-05-03T04:55:52.725Z"
 }

@@ -24,51 +24,72 @@ const DEFAULT_SETTINGS = {
   lastUpdated: new Date().toISOString()
 };
 
+// Validate vSphere settings before using them
+function validateVSphereSettings(settings) {
+  if (!settings.vsphere || !settings.vsphere.server || !settings.vsphere.user || !settings.vsphere.password) {
+    throw new Error('vSphere settings are incomplete. Please configure the server, user, and password.');
+  }
+}
+
 // Initialize settings file if it doesn't exist
 function initializeSettings() {
-  if (!fs.existsSync(SETTINGS_FILE_PATH)) {
-    fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(DEFAULT_SETTINGS, null, 2));
-    console.log('Settings file initialized with default values');
-  } else {
-    // File exists, but ensure it has all required structure fields
-    try {
-      const currentSettings = JSON.parse(fs.readFileSync(SETTINGS_FILE_PATH, 'utf8'));
-      let needsUpdate = false;
-      
-      // Check for missing top-level sections and add them if needed
-      for (const section of ['vsphere', 'netbox', 'aap']) {
-        if (!currentSettings[section]) {
-          currentSettings[section] = DEFAULT_SETTINGS[section];
-          needsUpdate = true;
-          console.log(`Added missing section '${section}' to settings`);
-        }
-      }
-      
-      // Ensure AAP section has all required fields
-      if (currentSettings.aap) {
-        if (!currentSettings.aap.api_url) {
-          currentSettings.aap.api_url = DEFAULT_SETTINGS.aap.api_url;
-          needsUpdate = true;
-          console.log('Added missing AAP API URL to settings');
-        }
-        
-        if (!currentSettings.aap.api_token) {
-          currentSettings.aap.api_token = DEFAULT_SETTINGS.aap.api_token;
-          needsUpdate = true;
-          console.log('Added missing AAP API token to settings');
-        }
-      }
-      
-      // Update file if changes were made
-      if (needsUpdate) {
-        currentSettings.lastUpdated = new Date().toISOString();
-        fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(currentSettings, null, 2));
-        console.log('Updated settings file with missing fields');
-      }
-    } catch (error) {
-      console.error('Error reading or updating settings file:', error);
-      // Don't overwrite existing file in case of error
+  try {
+    if (!fs.existsSync(SETTINGS_FILE_PATH)) {
+      console.log('Settings file not found. Creating a new one with default settings.');
+      fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      return;
     }
+
+    const fileData = fs.readFileSync(SETTINGS_FILE_PATH, 'utf8');
+    let currentSettings;
+
+    try {
+      currentSettings = JSON.parse(fileData);
+    } catch (parseError) {
+      console.error('Settings file is invalid. Recreating with default settings.');
+      currentSettings = DEFAULT_SETTINGS;
+      fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      return;
+    }
+
+    let needsUpdate = false;
+
+    // Ensure all required fields are present
+    for (const section in DEFAULT_SETTINGS) {
+      if (!currentSettings[section]) {
+        currentSettings[section] = DEFAULT_SETTINGS[section];
+        needsUpdate = true;
+        console.log(`Added missing section: ${section}`);
+      }
+    }
+
+    // Ensure AAP section has all required fields
+    if (currentSettings.aap) {
+      if (!currentSettings.aap.api_url) {
+        currentSettings.aap.api_url = DEFAULT_SETTINGS.aap.api_url;
+        needsUpdate = true;
+        console.log('Added missing AAP API URL to settings');
+      }
+
+      if (!currentSettings.aap.api_token) {
+        currentSettings.aap.api_token = DEFAULT_SETTINGS.aap.api_token;
+        needsUpdate = true;
+        console.log('Added missing AAP API token to settings');
+      }
+    }
+
+    // Update file if changes were made
+    if (needsUpdate) {
+      currentSettings.lastUpdated = new Date().toISOString();
+      fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(currentSettings, null, 2));
+      console.log('Updated settings file with missing fields');
+    }
+
+    // Validate vSphere settings
+    validateVSphereSettings(currentSettings);
+  } catch (error) {
+    console.error('Error initializing settings file:', error.message);
+    throw error;
   }
 }
 

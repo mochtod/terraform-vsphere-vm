@@ -1,0 +1,21 @@
+{
+  "id": "c36150f8-2853-4c22-b5d6-ad72302505d4",
+  "name": "newonetoo",
+  "createdAt": "2025-05-02T19:01:58.064Z",
+  "config": {
+    "datacenter": "datacenter-264",
+    "cluster": "domain-c9814669",
+    "datastore_cluster": "derived-cluster-1",
+    "network": "",
+    "vm_name": "newonetoo",
+    "vm_template": "rhel9-template0314",
+    "vm_guest_id": "rhel9_64Guest",
+    "vm_cpu": "4",
+    "vm_memory": "32768",
+    "vm_disk_size": "100",
+    "vm_network_adapter_type": "vmxnet3",
+    "additional_disks": []
+  },
+  "status": "created",
+  "lastUpdated": "2025-05-03T14:28:24.535Z"
+}

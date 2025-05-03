@@ -6,6 +6,9 @@ const fs = require('fs');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
+const vsphereGlobal = require('./vsphere-global-connection');
+const vsphereRestClient = require('./vsphere-rest-client');
+const settings = require('./settings');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,7 +27,6 @@ const vsphereInfraRouter = require('./vsphere-infra-api');
 app.use('/api/vsphere-infra', vsphereInfraRouter);
 
 // Register settings module
-const settings = require('./settings');
 settings.initializeSettings(); // Initialize settings on server start
 
 // Directory for storing tfvars files
@@ -1011,4 +1013,74 @@ app.post('/api/aap/launch', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Access the web interface at http://localhost:${PORT}`);
+});
+
+// Initialize vSphere connection and cache on server start
+try {
+    settings.initializeSettings();
+    const globalSettings = settings.getSettings();
+    vsphereGlobal.loadCachedInfrastructure();
+
+    // Validate and connect to vSphere
+    if (globalSettings.vsphere) {
+        console.log('[vSphere] Validating and connecting to vSphere...');
+        vsphereGlobal.initializeVSphereConnection(globalSettings, vsphereRestClient);
+    } else {
+        console.error('[vSphere] vSphere settings are missing. Please configure them in the settings file.');
+    }
+} catch (error) {
+    console.error('[vSphere] Error during initialization:', error.message);
+}
+
+// Endpoint to fetch cached infrastructure
+app.get('/api/vsphere-infra/cache', (req, res) => {
+    try {
+        const infrastructure = vsphereGlobal.getCachedInfrastructure();
+        res.json({ success: true, infrastructure });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to fetch cached infrastructure' });
+    }
+});
+
+// Endpoint to refresh vSphere connection and cache
+app.post('/api/vsphere-infra/refresh', async (req, res) => {
+    try {
+        await vsphereGlobal.initializeVSphereConnection(globalSettings, vsphereRestClient);
+        res.json({ success: true, message: 'vSphere connection and cache refreshed successfully' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to refresh vSphere connection and cache' });
+    }
+});
+
+// Endpoint to validate and debug vSphere connection
+app.post('/api/vsphere/validate', async (req, res) => {
+    try {
+        const globalSettings = settings.getSettings();
+
+        // Validate vSphere settings
+        if (!globalSettings.vsphere || !globalSettings.vsphere.server || !globalSettings.vsphere.user || !globalSettings.vsphere.password) {
+            return res.status(400).json({
+                success: false,
+                error: 'vSphere settings are incomplete. Please configure the server, user, and password.'
+            });
+        }
+
+        // Attempt to connect to vSphere
+        console.log('[vSphere] Validating connection with current settings...');
+        const sessionCookie = await vsphereRestClient.loginVSphere(
+            globalSettings.vsphere.server,
+            globalSettings.vsphere.user,
+            globalSettings.vsphere.password
+        );
+
+        if (sessionCookie) {
+            console.log('[vSphere] Connection validated successfully.');
+            return res.json({ success: true, message: 'vSphere connection validated successfully.' });
+        } else {
+            return res.status(500).json({ success: false, error: 'Failed to validate vSphere connection.' });
+        }
+    } catch (err) {
+        console.error('[vSphere] Validation error:', err.message);
+        return res.status(500).json({ success: false, error: err.message });
+    }
 });

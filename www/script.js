@@ -459,6 +459,63 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Load workspace-specific settings
+    async function loadWorkspaceSettings(workspaceId) {
+        try {
+            const response = await fetch(`/api/workspaces/${workspaceId}/config`);
+            const data = await response.json();
+            if (data.success) {
+                applyWorkspaceSettings(data.config);
+            } else {
+                console.error('Failed to load workspace settings:', data.error);
+            }
+        } catch (err) {
+            console.error('Error loading workspace settings:', err.message);
+        }
+    }
+
+    // Apply workspace settings to the UI
+    function applyWorkspaceSettings(config) {
+        const datacenterSelect = document.getElementById('datacenter');
+        const clusterSelect = document.getElementById('cluster');
+        const vmNameInput = document.getElementById('vm_name');
+
+        if (config.datacenter) {
+            datacenterSelect.value = config.datacenter;
+            datacenterSelect.dispatchEvent(new Event('change'));
+        }
+        if (config.cluster) {
+            clusterSelect.value = config.cluster;
+        }
+        if (config.vmName) {
+            vmNameInput.value = config.vmName;
+        }
+    }
+
+    // Save workspace-specific settings
+    async function saveWorkspaceSettings(workspaceId) {
+        try {
+            const datacenter = document.getElementById('datacenter').value;
+            const cluster = document.getElementById('cluster').value;
+            const vmName = document.getElementById('vm_name').value;
+
+            const config = { datacenter, cluster, vmName };
+
+            const response = await fetch(`/api/workspaces/${workspaceId}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ config })
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                console.error('Failed to save workspace settings:', data.error);
+            }
+        } catch (err) {
+            console.error('Error saving workspace settings:', err.message);
+        }
+    }
+
     // Update tfvars display when any form field changes
     const formInputs = document.querySelectorAll('#vm-form input, #vm-form select');
     formInputs.forEach(input => {

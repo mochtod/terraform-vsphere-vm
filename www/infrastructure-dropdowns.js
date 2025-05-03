@@ -15,13 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const vsphereSettings = getVSphereConnectionInfo();
         
         if (!vsphereSettings.server || !vsphereSettings.user || !vsphereSettings.password) {
-            // If connection details aren't available, use demo values
-            populateSelectWithDemoData(datacenterSelect, [
-                { id: 'datacenter-1', name: 'EBDC NONPROD' },
-                { id: 'datacenter-2', name: 'EBDC PROD' },
-                { id: 'datacenter-3', name: 'USDC NONPROD' },
-                { id: 'datacenter-4', name: 'USDC PROD' }
-            ]);
+            // If connection details aren't available, show 'No data' in dropdowns
+            datacenterSelect.innerHTML = '<option value="">No data</option>';
+            datacenterSelect.disabled = true;
             return;
         }
         
@@ -146,11 +142,80 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load datastore clusters for selected cluster
     function loadDatastoreClusters(clusterName) {
         datastoreClusterSelect.disabled = false;
+        datastoreClusterSelect.innerHTML = '<option value="">Loading...</option>';
+        
+        // Clear any existing help text
+        if (datastoreClusterSelect.parentNode) {
+            const existingHelp = datastoreClusterSelect.parentNode.querySelector('.help-text');
+            if (existingHelp) {
+                existingHelp.remove();
+            }
+        }
+        
+        console.log(`[UI] Fetching datastore clusters for cluster: ${clusterName}`);
+        
         fetchInfrastructureComponent('datastoreClusters', clusterName, datastoreClusterSelect)
             .then(result => {
+                // Check if we have any datastore clusters
+                const hasClusters = result && result.data && result.data.length > 0;
+                
+                if (!hasClusters) {
+                    console.log(`[UI] No datastore clusters found for cluster: ${clusterName}`);
+                    
+                    // Handle the case where no datastore clusters are available
+                    datastoreClusterSelect.innerHTML = '<option value="">No datastore clusters available</option>';
+                    
+                    // Add a help text explaining why
+                    const helpText = document.createElement('div');
+                    helpText.className = 'help-text';
+                    helpText.style.color = '#666';
+                    helpText.style.fontSize = '0.9em';
+                    helpText.style.marginTop = '5px';
+                    helpText.textContent = 'Datastore clusters (e.g., np-cl60-dsc) are not configured in this vSphere environment for the selected cluster.';
+                    
+                    // Insert after the select element
+                    if (datastoreClusterSelect.parentNode) {
+                        datastoreClusterSelect.parentNode.insertBefore(helpText, datastoreClusterSelect.nextSibling);
+                    }
+                    
+                    // Update the form state
+                    if (typeof generateTfvars === 'function' && !initialLoad) {
+                        generateTfvars();
+                    }
+                    return;
+                }
+                
+                console.log(`[UI] Found ${result.data.length} datastore clusters for cluster: ${clusterName}`);
+                
+                // Log if np-cl60-dsc is in the results
+                const exampleClusterFound = result.data.some(ds => ds.name === 'np-cl60-dsc');
+                if (exampleClusterFound) {
+                    console.log(`[UI] Example cluster 'np-cl60-dsc' found in results`);
+                }
+                
                 // If we have a current workspace, try to select the saved datastore cluster
                 if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.datastore_cluster) {
-                    selectOptionByText(datastoreClusterSelect, window.currentWorkspace.config.datastore_cluster);
+                    const selected = selectOptionByText(datastoreClusterSelect, window.currentWorkspace.config.datastore_cluster);
+                    if (selected) {
+                        console.log(`[UI] Selected saved datastore cluster: ${window.currentWorkspace.config.datastore_cluster}`);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('[UI] Error loading datastore clusters:', error);
+                datastoreClusterSelect.innerHTML = '<option value="">Error loading datastore clusters</option>';
+                
+                // Add a help text explaining the error
+                const helpText = document.createElement('div');
+                helpText.className = 'help-text error';
+                helpText.style.color = '#d9534f';
+                helpText.style.fontSize = '0.9em';
+                helpText.style.marginTop = '5px';
+                helpText.textContent = `Failed to load datastore clusters: ${error.message || 'Unknown error'}. Check vSphere configuration.`;
+                
+                // Insert after the select element
+                if (datastoreClusterSelect.parentNode) {
+                    datastoreClusterSelect.parentNode.insertBefore(helpText, datastoreClusterSelect.nextSibling);
                 }
             });
     }
@@ -192,45 +257,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // Helper function to fetch infrastructure components from API
     async function fetchInfrastructureComponent(component, parent, selectElement) {
         try {
-            // Show loading state
             selectElement.innerHTML = '<option value="">Loading...</option>';
-            
-            // Get vSphere connection details
             const vsphereSettings = getVSphereConnectionInfo();
-            
             if (!vsphereSettings.server || !vsphereSettings.user || !vsphereSettings.password) {
-                // Use demo data if no connection details
-                return populateSelectWithDemoData(selectElement, getDemoDataForComponent(component, parent));
+                // No connection details, clear dropdown
+                selectElement.innerHTML = '<option value="">No data</option>';
+                selectElement.disabled = true;
+                return;
             }
-            
-            // Make API call to fetch infrastructure components
+            // For datacenters, no parent needed. For clusters, parent is datacenter ID.
+            let parentId = parent;
+            if (component === 'clusters' && datacenterSelect) {
+                const selected = datacenterSelect.options[datacenterSelect.selectedIndex];
+                parentId = selected ? selected.value : parent;
+            }
             const response = await fetch('/api/vsphere-infra/components', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     vsphereServer: vsphereSettings.server,
                     vsphereUser: vsphereSettings.user,
                     vspherePassword: vsphereSettings.password,
                     component,
-                    parent
+                    parent: parentId
                 })
             });
-            
             const data = await response.json();
-            
-            if (data.success && data.data && data.data.length > 0) {
-                // Populate select with fetched data
+            if (data.success && Array.isArray(data.data)) {
                 populateSelect(selectElement, data.data);
-                return true;
+                selectElement.disabled = false;
             } else {
-                // Fall back to demo data if API call fails or returns no data
-                return populateSelectWithDemoData(selectElement, getDemoDataForComponent(component, parent));
+                selectElement.innerHTML = '<option value="">No data</option>';
+                selectElement.disabled = true;
             }
-        } catch (error) {
-            console.error(`Error fetching ${component}:`, error);
-            return populateSelectWithDemoData(selectElement, getDemoDataForComponent(component, parent));
+        } catch (err) {
+            selectElement.innerHTML = '<option value="">No data</option>';
+            selectElement.disabled = true;
         }
     }
     
@@ -239,37 +301,50 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clear existing options except the first one
         selectElement.innerHTML = '<option value="">Select an option</option>';
         
-            // Add new options
-            data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.name; // Use name as value, not ID
-                option.textContent = item.name;
-                option.dataset.id = item.id; // Store ID as data attribute if needed
-                selectElement.appendChild(option);
-            });
+        // Sort the data alphabetically by name (A-Z)
+        data.sort((a, b) => a.name.localeCompare(b.name));
         
-        // Enable the select element
-        selectElement.disabled = false;
+    // Log detailed information for datastore clusters
+    if (selectElement.id === 'datastore_cluster') {
+        console.log('************************ DATASTORE CLUSTERS DEBUG ************************');
+        console.log(`Populating datastore clusters dropdown with ${data.length} items:`);
+        console.log(JSON.stringify(data, null, 2));
+        console.log('************************************************************************');
     }
-    
-    // Helper function to populate a select with demo data
-    function populateSelectWithDemoData(selectElement, data) {
-        // Clear existing options
-        selectElement.innerHTML = '<option value="">Select an option</option>';
         
-        // Add demo options
+        // Add new options - special handling for datastore clusters
         data.forEach(item => {
             const option = document.createElement('option');
-            option.value = item.name; // Use name as value, not ID
+            
+            // For datastore clusters, use ID as value to ensure correct selection
+            if (selectElement.id === 'datastore_cluster') {
+                // For datastore clusters, use the most reliable ID property available
+                const datastoreClusterId = item.datastore_cluster || item.id || (item.original && item.original.id);
+                option.value = datastoreClusterId;
+                
+                // Add data attributes for debugging and traceability
+                option.dataset.type = 'datastore_cluster';
+                
+                // Store original data for debugging if available
+                if (item.original) {
+                    option.dataset.original = JSON.stringify(item.original);
+                }
+                
+                // Log each item as it's added to the dropdown
+                console.log(`[UI] Adding datastore cluster option: ${item.name} (${datastoreClusterId})`);
+            } else {
+                option.value = item.name; // Use name for other dropdown types
+            }
+            
             option.textContent = item.name;
-            option.dataset.id = item.id; // Store ID as data attribute if needed
+            option.dataset.id = item.id; // Always store ID as data attribute
+            
+            // Add the item to the dropdown
             selectElement.appendChild(option);
         });
         
         // Enable the select element
         selectElement.disabled = false;
-        
-        return true;
     }
     
     // Helper function to select an option by text
@@ -283,61 +358,125 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     }
     
-    // Demo data for each component type
-    function getDemoDataForComponent(component, parent) {
-        const demoData = {
-            datacenters: [
-                { id: 'datacenter-1', name: 'EBDC NONPROD' },
-                { id: 'datacenter-2', name: 'EBDC PROD' },
-                { id: 'datacenter-3', name: 'USDC NONPROD' },
-                { id: 'datacenter-4', name: 'USDC PROD' }
-            ],
-            clusters: {
-                'EBDC NONPROD': [
-                    { id: 'cluster-1', name: 'np-cl60-lin' },
-                    { id: 'cluster-2', name: 'np-cl61-lin' },
-                    { id: 'cluster-3', name: 'np-cl62-win' }
-                ],
-                'EBDC PROD': [
-                    { id: 'cluster-4', name: 'pr-cl60-lin' },
-                    { id: 'cluster-5', name: 'pr-cl61-lin' }
-                ],
-                'default': [
-                    { id: 'cluster-1', name: 'np-cl60-lin' }
-                ]
-            },
-            datastoreClusters: {
-                'np-cl60-lin': [
-                    { id: 'datastore-cluster-1', name: 'np-cl60-dsc' },
-                    { id: 'datastore-cluster-2', name: 'np-cl60-dsc-ssd' }
-                ],
-                'default': [
-                    { id: 'datastore-cluster-1', name: 'np-cl60-dsc' }
-                ]
-            },
-            networks: {
-                'np-cl60-lin': [
-                    { id: 'network-1', name: 'np-lin-vds-989-linux' },
-                    { id: 'network-2', name: 'np-lin-vds-990-linux' }
-                ],
-                'default': [
-                    { id: 'network-1', name: 'np-lin-vds-989-linux' }
-                ]
+    // Fetch and populate global infrastructure data
+    async function fetchGlobalInfrastructure() {
+        try {
+            const response = await fetch('/api/vsphere-infra/cache');
+            const data = await response.json();
+            if (data.success) {
+                populateInfrastructureDropdowns(data.infrastructure);
+            } else {
+                console.error('Failed to fetch global infrastructure:', data.error);
             }
-        };
-        
-        if (component === 'datacenters') {
-            return demoData.datacenters;
-        } else if (component === 'clusters') {
-            return demoData.clusters[parent] || demoData.clusters.default;
-        } else if (component === 'datastoreClusters') {
-            return demoData.datastoreClusters[parent] || demoData.datastoreClusters.default;
-        } else if (component === 'networks') {
-            return demoData.networks[parent] || demoData.networks.default;
+        } catch (err) {
+            console.error('Error fetching global infrastructure:', err.message);
         }
-        
-        return [];
     }
+
+    // Populate dropdowns with global infrastructure data
+    function populateInfrastructureDropdowns(infrastructure) {
+        const datacenterSelect = document.getElementById('datacenter');
+        const clusterSelect = document.getElementById('cluster');
+        const datastoreClusterSelect = document.getElementById('datastore_cluster');
+        const networkSelect = document.getElementById('network');
+
+        // Populate datacenters
+        datacenterSelect.innerHTML = '<option value="">Select Datacenter</option>';
+        infrastructure.datacenters.forEach(dc => {
+            const option = document.createElement('option');
+            option.value = dc.datacenter;
+            option.textContent = dc.name;
+            datacenterSelect.appendChild(option);
+        });
+
+        // Populate clusters when a datacenter is selected
+        datacenterSelect.addEventListener('change', function () {
+            const selectedDatacenter = this.value;
+            clusterSelect.innerHTML = '<option value="">Select Cluster</option>';
+            datastoreClusterSelect.innerHTML = '<option value="">Select Datastore Cluster</option>';
+            networkSelect.innerHTML = '<option value="">Select Network</option>';
+            
+            // Disable dependent selects
+            datastoreClusterSelect.disabled = true;
+            networkSelect.disabled = true;
+            
+            if (selectedDatacenter && infrastructure.clusters[selectedDatacenter]) {
+                // Enable cluster select
+                clusterSelect.disabled = false;
+                
+                infrastructure.clusters[selectedDatacenter].forEach(cluster => {
+                    const option = document.createElement('option');
+                    option.value = cluster.cluster;
+                    option.textContent = cluster.name;
+                    clusterSelect.appendChild(option);
+                });
+            } else {
+                clusterSelect.disabled = true;
+            }
+        });
+        
+        // Populate datastore clusters and networks when a cluster is selected
+        clusterSelect.addEventListener('change', function () {
+            const selectedCluster = this.value;
+            datastoreClusterSelect.innerHTML = '<option value="">Select Datastore Cluster</option>';
+            networkSelect.innerHTML = '<option value="">Select Network</option>';
+            
+            // Check if we have datastore clusters and networks for this cluster
+            if (selectedCluster) {
+                // Enable datastore cluster and network selects
+                datastoreClusterSelect.disabled = false;
+                networkSelect.disabled = false;
+                
+                // Populate datastore clusters
+                if (infrastructure.datastoreClusters && infrastructure.datastoreClusters[selectedCluster]) {
+                    let datastoreClusters = infrastructure.datastoreClusters[selectedCluster];
+                    // Log the datastore clusters received from the cache
+                    console.log('Cache-provided datastore clusters:', JSON.stringify(datastoreClusters));
+                    
+                    // Sort datastore clusters alphabetically by name
+                    datastoreClusters.sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    datastoreClusters.forEach(ds => {
+                        const option = document.createElement('option');
+                        // For datastore clusters, use the most reliable ID property available
+                        const dsId = ds.datastore_cluster || ds.id || (ds.original && ds.original.id);
+                        option.value = dsId;
+                        option.textContent = ds.name;
+                        
+                        // Add data attributes for debugging
+                        option.dataset.type = 'datastore_cluster';
+                        if (ds.original) {
+                            option.dataset.original = JSON.stringify(ds.original);
+                        }
+                        
+                        // Log each datastore cluster being added
+                        console.log(`[UI] Adding cached datastore cluster option: ${ds.name} (${dsId})`);
+                        
+                        datastoreClusterSelect.appendChild(option);
+                    });
+                }
+                
+                // Populate networks
+                if (infrastructure.networks && infrastructure.networks[selectedCluster]) {
+                    let networks = infrastructure.networks[selectedCluster];
+                    // Sort networks alphabetically by name
+                    networks.sort((a, b) => a.name.localeCompare(b.name));
+                    networks.forEach(network => {
+                        const option = document.createElement('option');
+                        option.value = network.network;
+                        option.textContent = network.name;
+                        networkSelect.appendChild(option);
+                    });
+                }
+            } else {
+                datastoreClusterSelect.disabled = true;
+                networkSelect.disabled = true;
+            }
+        });
+    }
+
+    // Call this function on page load to initialize dropdowns
+    fetchGlobalInfrastructure();
     
     // Initialize dropdowns when global settings are loaded
     // We'll set up an observer to wait for global settings to be loaded
@@ -371,4 +510,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // If we don't have connection details, initialize with demo data
         initializeInfrastructureSelects();
     }
+    
+    // Fetch and populate datacenter dropdown on page load or workspace creation
+    async function initializeDatacenterDropdown() {
+        const datacenterSelect = document.getElementById('datacenter');
+        try {
+            // Fetch global infrastructure data
+            const response = await fetch('/api/vsphere-infra/cache');
+            const data = await response.json();
+
+            if (data.success && data.infrastructure.datacenters.length > 0) {
+                // Populate datacenter dropdown
+                datacenterSelect.innerHTML = '<option value="">Select Datacenter</option>';
+                data.infrastructure.datacenters.forEach(dc => {
+                    const option = document.createElement('option');
+                    option.value = dc.datacenter;
+                    option.textContent = dc.name;
+                    datacenterSelect.appendChild(option);
+                });
+                datacenterSelect.disabled = false;
+            } else {
+                datacenterSelect.innerHTML = '<option value="">No datacenters available</option>';
+                datacenterSelect.disabled = true;
+            }
+        } catch (err) {
+            console.error('Error fetching datacenters:', err.message);
+            datacenterSelect.innerHTML = '<option value="">Error loading datacenters</option>';
+            datacenterSelect.disabled = true;
+        }
+    }
+
+    // Call this function when a new workspace is created or the page loads
+    initializeDatacenterDropdown();
 });
