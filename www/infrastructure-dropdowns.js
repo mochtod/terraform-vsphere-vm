@@ -10,8 +10,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let initialLoad = true;
 
     // Helper function to get vSphere connection information
+    // Returns connection details object or null if incomplete
     function getVSphereConnectionInfo() {
-        const vspherePassword = document.getElementById('vsphere_password').value;
+        const vspherePassword = document.getElementById('vsphere_password')?.value || '';
         let server = '';
         let user = '';
 
@@ -20,24 +21,27 @@ document.addEventListener('DOMContentLoaded', function() {
             server = window.globalSettings.vsphere.server || '';
             user = window.globalSettings.vsphere.user || '';
         }
-        // No else needed - if global settings don't provide values, server/user remain ''
 
-        return {
-            server: server,
-            user: user,
-            password: vspherePassword || ''
-        };
+        // Return null if any part is missing
+        if (!server || !user || !vspherePassword) {
+            console.log("Connection info incomplete:", { server: !!server, user: !!user, password: !!vspherePassword });
+            return null;
+        }
+
+        return { server, user, password: vspherePassword };
     }
 
-    // Function to populate dropdowns (can be called initially or on update)
+    // Function to update dropdowns based on available connection info
     function updateInfrastructureDropdowns() {
         console.log("Attempting to update infrastructure dropdowns...");
         const vsphereSettings = getVSphereConnectionInfo();
 
-        // Always try to fetch datacenters if possible, otherwise use demo
-        if (vsphereSettings.server && vsphereSettings.user && vsphereSettings.password) {
-            console.log("Fetching real datacenter data...");
-            fetchInfrastructureComponent('datacenters', null, datacenterSelect)
+        if (vsphereSettings) {
+            console.log("Valid connection info found. Fetching real datacenter data...");
+            // Enable password field interaction if needed, though it's likely already enabled
+            document.getElementById('vsphere_password').disabled = false;
+
+            fetchInfrastructureComponent('datacenters', null, datacenterSelect, vsphereSettings)
                 .then(success => {
                     if (success) {
                         console.log("Successfully fetched real datacenter data.");
@@ -45,155 +49,73 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.datacenter) {
                             if (selectOptionByText(datacenterSelect, window.currentWorkspace.config.datacenter)) {
                                 console.log("Pre-selecting datacenter and loading clusters for workspace:", window.currentWorkspace.config.datacenter);
-                                loadClusters(datacenterSelect.options[datacenterSelect.selectedIndex].text);
+                                loadClusters(datacenterSelect.options[datacenterSelect.selectedIndex].text); // Pass name
                             }
                         }
                     } else {
-                         console.log("Fetch infrastructure component returned false, likely using demo data fallback.");
+                         console.log("Fetch infrastructure component failed for datacenters.");
+                         // Optionally clear or disable selects further down the chain if needed
+                         resetSelects(true); // Reset children if datacenter load failed
                     }
-                    // If fetch failed, fetchInfrastructureComponent already fell back to demo data
                 });
         } else {
-            // Populate datacenters with demo data if connection info incomplete
-            console.log("Connection info incomplete, populating datacenters with demo data.");
-            populateSelectWithDemoData(datacenterSelect, getDemoDataForComponent('datacenters', null));
-            // Reset children selects as we are using demo data
-            resetSelects();
+            // Connection info incomplete, reset and disable dropdowns
+            console.log("Connection info incomplete. Resetting and disabling dropdowns.");
+            resetSelects(true); // Reset all selects and show placeholder
+             // Disable password input if server/user are missing from settings
+            if (!window.globalSettings?.vsphere?.server || !window.globalSettings?.vsphere?.user) {
+                 document.getElementById('vsphere_password').disabled = true;
+                 document.getElementById('vsphere_password').placeholder = "Enter vSphere Server/User in Settings first";
+            } else {
+                 document.getElementById('vsphere_password').disabled = false;
+                 document.getElementById('vsphere_password').placeholder = "Enter password for this operation";
+            }
         }
     }
 
-    // Listen for changes on vSphere connection fields
-    const connectionFields = ['vsphere_server', 'vsphere_user', 'vsphere_password'];
-    connectionFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.addEventListener('change', function() {
-                // Only reload datacenters if we have all connection fields
-                const vsphereServer = document.getElementById('vsphere_server').value;
-                const vsphereUser = document.getElementById('vsphere_user').value;
-                const vspherePassword = document.getElementById('vsphere_password').value;
-                
-                if (vsphereServer && vsphereUser && vspherePassword) {
-                    resetSelects();
-                    updateInfrastructureDropdowns();
-                }
-            });
-        }
-    });
-    
-    // Reset all select dropdowns to empty state
-    function resetSelects() {
-        clusterSelect.innerHTML = '<option value="">Select Cluster</option>';
-        datastoreClusterSelect.innerHTML = '<option value="">Select Datastore Cluster</option>';
-        networkSelect.innerHTML = '<option value="">Select Network</option>';
-        
-        // Disable dependent selects until parent is selected
-        clusterSelect.disabled = true;
-        datastoreClusterSelect.disabled = true;
-        networkSelect.disabled = true;
+    // Reset select dropdowns
+    function resetSelects(showPlaceholder = false) {
+        const selects = [datacenterSelect, clusterSelect, datastoreClusterSelect, networkSelect];
+        const placeholders = [
+            "Connect to vSphere...",
+            "Select Datacenter first",
+            "Select Cluster first",
+            "Select Cluster first"
+        ];
+
+        selects.forEach((select, index) => {
+            select.innerHTML = `<option value="">${showPlaceholder ? placeholders[index] : `Select ${select.id.replace('_', ' ')}...`}</option>`;
+            select.disabled = true; // Always disable initially
+        });
+
+         // Specifically enable datacenter select only if connection is possible
+         if (getVSphereConnectionInfo()) {
+             datacenterSelect.disabled = false;
+             datacenterSelect.innerHTML = '<option value="">Select Datacenter...</option>';
+         } else if (showPlaceholder) {
+             datacenterSelect.innerHTML = `<option value="">${placeholders[0]}</option>`;
+         }
     }
-    
-    // Event listener for datacenter selection
-    datacenterSelect.addEventListener('change', function() {
-        resetSelects();
-        
-        if (this.value) {
-            const datacenterName = this.options[this.selectedIndex].text;
-            console.log("Datacenter changed, loading clusters for:", datacenterName);
-            loadClusters(datacenterName);
-        }
-        if (!initialLoad && typeof generateTfvars === 'function') {
-            generateTfvars();
-        }
-    });
-    
-    // Event listener for cluster selection
-    clusterSelect.addEventListener('change', function() {
-        datastoreClusterSelect.innerHTML = '<option value="">Select Datastore Cluster</option>';
-        networkSelect.innerHTML = '<option value="">Select Network</option>';
-        datastoreClusterSelect.disabled = true;
-        networkSelect.disabled = true;
-        if (this.value) {
-            const clusterName = this.options[this.selectedIndex].text;
-            console.log("Cluster changed, loading datastores and networks for:", clusterName);
-            loadDatastoreClusters(clusterName);
-            loadNetworks(clusterName);
-        }
-        if (!initialLoad && typeof generateTfvars === 'function') {
-            generateTfvars();
-        }
-    });
-    
-     // Event listeners for remaining select changes
-    datastoreClusterSelect.addEventListener('change', function() {
-        if (!initialLoad && typeof generateTfvars === 'function') {
-            generateTfvars();
-        }
-    });
-    
-    networkSelect.addEventListener('change', function() {
-        if (!initialLoad && typeof generateTfvars === 'function') {
-            generateTfvars();
-        }
-    });
-    
-    // Load clusters for selected datacenter
-    function loadClusters(datacenterName) {
-        clusterSelect.disabled = false;
-        fetchInfrastructureComponent('clusters', datacenterName, clusterSelect)
-            .then(result => {
-                // If we have a current workspace, try to select the saved cluster
-                if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.cluster) {
-                    selectOptionByText(clusterSelect, window.currentWorkspace.config.cluster);
-                    
-                    // If cluster is selected, load datastore clusters and networks
-                    if (clusterSelect.value) {
-                        const clusterName = clusterSelect.options[clusterSelect.selectedIndex].text;
-                        loadDatastoreClusters(clusterName);
-                        loadNetworks(clusterName);
-                    }
-                }
-            });
-    }
-    
-    // Load datastore clusters for selected cluster
-    function loadDatastoreClusters(clusterName) {
-        datastoreClusterSelect.disabled = false;
-        fetchInfrastructureComponent('datastoreClusters', clusterName, datastoreClusterSelect)
-            .then(result => {
-                // If we have a current workspace, try to select the saved datastore cluster
-                if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.datastore_cluster) {
-                    selectOptionByText(datastoreClusterSelect, window.currentWorkspace.config.datastore_cluster);
-                }
-            });
-    }
-    
-    // Load networks for selected cluster
-    function loadNetworks(clusterName) {
-        networkSelect.disabled = false;
-        fetchInfrastructureComponent('networks', clusterName, networkSelect)
-            .then(result => {
-                // If we have a current workspace, try to select the saved network
-                if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.network) {
-                    selectOptionByText(networkSelect, window.currentWorkspace.config.network);
-                }
-            });
-    }
-    
+
+
     // Helper function to fetch infrastructure components from API
-    async function fetchInfrastructureComponent(component, parent, selectElement) {
+    // Takes vsphereSettings directly to avoid calling getVSphereConnectionInfo multiple times
+    async function fetchInfrastructureComponent(component, parent, selectElement, vsphereSettings) {
+        // Guard clause: Ensure we have connection settings before proceeding
+        if (!vsphereSettings) {
+            console.error(`Cannot fetch ${component}: Missing vSphere connection settings.`);
+            selectElement.innerHTML = '<option value="">Connection Error</option>';
+            selectElement.disabled = true;
+            return false; // Indicate failure
+        }
+
         try {
             // Show loading state
             selectElement.innerHTML = '<option value="">Loading...</option>';
-            
-            // Get vSphere connection details
-            const vsphereSettings = getVSphereConnectionInfo();
-            
-            if (!vsphereSettings.server || !vsphereSettings.user || !vsphereSettings.password) {
-                // Use demo data if no connection details
-                return populateSelectWithDemoData(selectElement, getDemoDataForComponent(component, parent));
-            }
-            
+            selectElement.disabled = true; // Disable while loading
+
+            console.log(`Fetching ${component} with parent: ${parent || 'none'}`);
+
             // Make API call to fetch infrastructure components
             const response = await fetch('/api/vsphere-infra/components', {
                 method: 'POST',
@@ -203,153 +125,101 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     vsphereServer: vsphereSettings.server,
                     vsphereUser: vsphereSettings.user,
-                    vspherePassword: vsphereSettings.password,
+                    vspherePassword: vsphereSettings.password, // Send password for this specific request
                     component,
-                    parent
+                    parent // parent will be the name (e.g., datacenter name, cluster name)
                 })
             });
-            
+
+            // Check if the response is ok (status code 200-299)
+            if (!response.ok) {
+                // Try to get error details from the response body
+                let errorMsg = `HTTP error ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorData.error || errorMsg;
+                } catch (e) { /* Ignore parsing error */ }
+                console.error(`Error fetching ${component}: ${errorMsg}`);
+                selectElement.innerHTML = `<option value="">API Error</option>`;
+                selectElement.disabled = true;
+                return false; // Indicate failure
+            }
+
             const data = await response.json();
-            
+
             if (data.success && data.data && data.data.length > 0) {
-                // Populate select with fetched data
-                populateSelect(selectElement, data.data);
-                return true;
-            } else {
-                // Fall back to demo data if API call fails or returns no data
-                return populateSelectWithDemoData(selectElement, getDemoDataForComponent(component, parent));
+                console.log(`Successfully fetched ${data.data.length} ${component}.`);
+                populateSelect(selectElement, data.data); // Populates and enables the select
+                return true; // Indicate success
+            } else if (data.success && data.data && data.data.length === 0) {
+                 console.log(`Successfully fetched ${component}, but no items found.`);
+                 selectElement.innerHTML = '<option value="">No items found</option>';
+                 selectElement.disabled = true; // Disable if empty
+                 return true; // Still a successful API call, just no data
+            }
+            else {
+                // Handle cases where data.success is false or data.data is missing
+                const errorDetail = data.message || 'Unknown API error structure';
+                console.error(`API Error fetching ${component}: ${errorDetail}`);
+                selectElement.innerHTML = `<option value="">API Error</option>`;
+                selectElement.disabled = true;
+                return false; // Indicate failure
             }
         } catch (error) {
-            console.error(`Error fetching ${component}:`, error);
-            return populateSelectWithDemoData(selectElement, getDemoDataForComponent(component, parent));
+            console.error(`Network or other error fetching ${component}:`, error);
+            selectElement.innerHTML = '<option value="">Fetch Error</option>';
+            selectElement.disabled = true;
+            return false; // Indicate failure
         }
     }
-    
+
     // Helper function to populate a select element with options
     function populateSelect(selectElement, data) {
-        // Clear existing options except the first one
-        selectElement.innerHTML = '<option value="">Select an option</option>';
-        
-            // Add new options
-            data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.name; // Use name as value, not ID
-                option.textContent = item.name;
-                option.dataset.id = item.id; // Store ID as data attribute if needed
-                selectElement.appendChild(option);
-            });
-        
-        // Enable the select element
-        selectElement.disabled = false;
-    }
-    
-    // Helper function to populate a select with demo data
-    function populateSelectWithDemoData(selectElement, data) {
         // Clear existing options
-        selectElement.innerHTML = '<option value="">Select an option</option>';
-        
-        // Add demo options
+        selectElement.innerHTML = `<option value="">Select ${selectElement.id.replace('_', ' ')}...</option>`; // More specific placeholder
+
+        // Add new options
         data.forEach(item => {
             const option = document.createElement('option');
-            option.value = item.name; // Use name as value, not ID
+            // Use the NAME as the value, as this is what the API expects for subsequent 'parent' filters
+            option.value = item.name;
             option.textContent = item.name;
-            option.dataset.id = item.id; // Store ID as data attribute if needed
+            option.dataset.id = item.id; // Store ID as data attribute if needed later
             selectElement.appendChild(option);
         });
-        
-        // Enable the select element
-        selectElement.disabled = false;
-        
-        return true;
-    }
-    
-    // Helper function to select an option by text
-    function selectOptionByText(selectElement, text) {
-        for (let i = 0; i < selectElement.options.length; i++) {
-            if (selectElement.options[i].text === text) {
-                selectElement.selectedIndex = i;
-                return true;
-            }
+
+        // Enable the select element ONLY if it has more than the placeholder option
+        selectElement.disabled = selectElement.options.length <= 1;
+        if (selectElement.options.length <=1) {
+             selectElement.innerHTML = '<option value="">No items found</option>';
         }
-        return false;
     }
-    
-    // Demo data for each component type
-    function getDemoDataForComponent(component, parent) {
-        const demoData = {
-            datacenters: [
-                { id: 'datacenter-1', name: 'EBDC NONPROD' },
-                { id: 'datacenter-2', name: 'EBDC PROD' },
-                { id: 'datacenter-3', name: 'USDC NONPROD' },
-                { id: 'datacenter-4', name: 'USDC PROD' }
-            ],
-            clusters: {
-                'EBDC NONPROD': [
-                    { id: 'cluster-1', name: 'np-cl60-lin' },
-                    { id: 'cluster-2', name: 'np-cl61-lin' },
-                    { id: 'cluster-3', name: 'np-cl62-win' }
-                ],
-                'EBDC PROD': [
-                    { id: 'cluster-4', name: 'pr-cl60-lin' },
-                    { id: 'cluster-5', name: 'pr-cl61-lin' }
-                ],
-                'default': [
-                    { id: 'cluster-1', name: 'np-cl60-lin' }
-                ]
-            },
-            datastoreClusters: {
-                'np-cl60-lin': [
-                    { id: 'datastore-cluster-1', name: 'np-cl60-dsc' },
-                    { id: 'datastore-cluster-2', name: 'np-cl60-dsc-ssd' }
-                ],
-                'default': [
-                    { id: 'datastore-cluster-1', name: 'np-cl60-dsc' }
-                ]
-            },
-            networks: {
-                'np-cl60-lin': [
-                    { id: 'network-1', name: 'np-lin-vds-989-linux' },
-                    { id: 'network-2', name: 'np-lin-vds-990-linux' }
-                ],
-                'default': [
-                    { id: 'network-1', name: 'np-lin-vds-989-linux' }
-                ]
-            }
-        };
-        
-        if (component === 'datacenters') {
-            return demoData.datacenters;
-        } else if (component === 'clusters') {
-            return demoData.clusters[parent] || demoData.clusters.default;
-        } else if (component === 'datastoreClusters') {
-            return demoData.datastoreClusters[parent] || demoData.datastoreClusters.default;
-        } else if (component === 'networks') {
-            return demoData.networks[parent] || demoData.networks.default;
-        }
-        
-        return [];
-    }
-    
+
+    // Remove demo data functions
+    // function populateSelectWithDemoData(...) {} // REMOVED
+    // function getDemoDataForComponent(...) {} // REMOVED
+
+
     // --- Initialization ---
 
-    // 1. Initial population on DOMContentLoaded: Always start with demo data
-    console.log("Initial population with demo data.");
-    populateSelectWithDemoData(datacenterSelect, getDemoDataForComponent('datacenters', null));
-    resetSelects(); // Ensure children are reset and disabled initially
+    // 1. Initial setup on DOMContentLoaded: Reset selects to disabled/placeholder state
+    console.log("Initial setup: Resetting dropdowns.");
+    resetSelects(true); // Show "Connect to vSphere..." initially
 
     // 2. Add listener for settings loaded
     document.addEventListener('settingsLoaded', function() {
         console.log('Global settings loaded event received.');
-        updateInfrastructureDropdowns(); // Try loading real data now
+        updateInfrastructureDropdowns(); // Attempt to load real data
     });
 
     // 3. Add listener for password input change (required for API calls)
     const passwordInput = document.getElementById('vsphere_password');
     if (passwordInput) {
+        // Use 'input' for immediate feedback, or 'change' if less frequent updates are okay
         passwordInput.addEventListener('input', function() {
-            // Debounce or throttle this if it causes performance issues
+            // Debounce this if necessary, but likely fine for password field
             console.log('Password input changed.');
-            updateInfrastructureDropdowns(); // Try loading real data now
+            updateInfrastructureDropdowns(); // Re-evaluate connection and attempt fetch
         });
     }
 
@@ -357,9 +227,123 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         console.log("Initial load period finished.");
         initialLoad = false;
-    }, 1500); // Delay to allow initial population/selection
+    }, 1500); // Delay to allow initial population/selection attempts
+
 
     // --- Event Listeners for Dropdown Changes ---
-    // (These remain largely the same, ensuring they call functions that handle API/demo fallback)
+
+    // Event listener for datacenter selection
+    datacenterSelect.addEventListener('change', function() {
+        // Reset children selects first
+        clusterSelect.innerHTML = '<option value="">Select Cluster...</option>'; clusterSelect.disabled = true;
+        datastoreClusterSelect.innerHTML = '<option value="">Select Datastore Cluster...</option>'; datastoreClusterSelect.disabled = true;
+        networkSelect.innerHTML = '<option value="">Select Network...</option>'; networkSelect.disabled = true;
+
+        if (this.value) { // Check if a valid datacenter is selected (not the placeholder)
+            const datacenterName = this.value; // Value is the name now
+            console.log("Datacenter changed, loading clusters for:", datacenterName);
+            loadClusters(datacenterName);
+        }
+        if (!initialLoad && typeof generateTfvars === 'function') {
+            generateTfvars();
+        }
+    });
+
+    // Event listener for cluster selection
+    clusterSelect.addEventListener('change', function() {
+        // Reset children selects
+        datastoreClusterSelect.innerHTML = '<option value="">Select Datastore Cluster...</option>'; datastoreClusterSelect.disabled = true;
+        networkSelect.innerHTML = '<option value="">Select Network...</option>'; networkSelect.disabled = true;
+
+        if (this.value) { // Check if a valid cluster is selected
+            const clusterName = this.value; // Value is the name
+            console.log("Cluster changed, loading datastores and networks for:", clusterName);
+            loadDatastoreClusters(clusterName);
+            loadNetworks(clusterName);
+        }
+        if (!initialLoad && typeof generateTfvars === 'function') {
+            generateTfvars();
+        }
+    });
+
+     // Event listeners for remaining select changes (Datastore Cluster, Network)
+    datastoreClusterSelect.addEventListener('change', function() {
+        if (!initialLoad && typeof generateTfvars === 'function') {
+            generateTfvars();
+        }
+    });
+
+    networkSelect.addEventListener('change', function() {
+        if (!initialLoad && typeof generateTfvars === 'function') {
+            generateTfvars();
+        }
+    });
+
+
+    // --- Load Functions for Dependent Dropdowns ---
+
+    // Load clusters for selected datacenter
+    function loadClusters(datacenterName) {
+        const vsphereSettings = getVSphereConnectionInfo();
+        if (!vsphereSettings) return; // Don't proceed if connection is lost
+
+        // No need to disable clusterSelect here, fetchInfrastructureComponent handles it
+        fetchInfrastructureComponent('clusters', datacenterName, clusterSelect, vsphereSettings)
+            .then(success => {
+                if (success && window.currentWorkspace?.config?.cluster) {
+                    if(selectOptionByText(clusterSelect, window.currentWorkspace.config.cluster)) {
+                         console.log("Pre-selecting cluster and loading children for workspace:", window.currentWorkspace.config.cluster);
+                         // If cluster is selected (either by user or pre-selection), load its children
+                         if (clusterSelect.value) {
+                             loadDatastoreClusters(clusterSelect.value); // Pass name
+                             loadNetworks(clusterSelect.value);       // Pass name
+                         }
+                    }
+                } else if (!success) {
+                    // Reset children if cluster load failed
+                    datastoreClusterSelect.innerHTML = '<option value="">Select Datastore Cluster...</option>'; datastoreClusterSelect.disabled = true;
+                    networkSelect.innerHTML = '<option value="">Select Network...</option>'; networkSelect.disabled = true;
+                }
+            });
+    }
+
+    // Load datastore clusters for selected cluster
+    function loadDatastoreClusters(clusterName) {
+         const vsphereSettings = getVSphereConnectionInfo();
+         if (!vsphereSettings) return;
+         fetchInfrastructureComponent('datastoreClusters', clusterName, datastoreClusterSelect, vsphereSettings)
+             .then(success => {
+                 if (success && window.currentWorkspace?.config?.datastore_cluster) {
+                     selectOptionByText(datastoreClusterSelect, window.currentWorkspace.config.datastore_cluster);
+                 }
+             });
+    }
+
+    // Load networks for selected cluster
+    function loadNetworks(clusterName) {
+         const vsphereSettings = getVSphereConnectionInfo();
+         if (!vsphereSettings) return;
+         fetchInfrastructureComponent('networks', clusterName, networkSelect, vsphereSettings)
+             .then(success => {
+                 if (success && window.currentWorkspace?.config?.network) {
+                     selectOptionByText(networkSelect, window.currentWorkspace.config.network);
+                 }
+             });
+    }
+
+    // Helper function to select an option by text (value is now text/name)
+    function selectOptionByText(selectElement, text) {
+        for (let i = 0; i < selectElement.options.length; i++) {
+            if (selectElement.options[i].value === text) { // Compare against value now
+                selectElement.selectedIndex = i;
+                // Manually trigger change event if needed for subsequent actions
+                // selectElement.dispatchEvent(new Event('change'));
+                return true;
+            }
+        }
+        console.warn(`Could not find option with text/value "${text}" in select element ${selectElement.id}`);
+        return false;
+    }
+
 
 }); // End DOMContentLoaded
