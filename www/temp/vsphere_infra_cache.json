@@ -166,28 +166,270 @@
     ]
   },
   "datastoreClusters": {
-    "domain-c10686923": [],
-    "domain-c10347033": [],
-    "domain-c6194930": [],
-    "domain-c9814669": [],
-    "domain-c9891266": [],
-    "domain-c11569222": [],
-    "domain-c11569224": [],
-    "domain-c11666645": [],
-    "domain-c11682478": [],
-    "domain-c11940210": [],
-    "domain-c3778922": [],
-    "domain-c8088291": [],
-    "domain-c8107730": [],
-    "domain-c8654436": [],
-    "domain-c9461462": [],
-    "domain-c9946801": [],
-    "domain-c9946803": [],
-    "domain-c11613603": [],
-    "domain-c11896787": [],
-    "domain-c9338904": [],
-    "domain-c11593742": [],
-    "domain-c8016316": []
+    "domain-c10686923": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c10347033": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c6194930": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c9814669": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c9891266": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11569222": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11569224": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11666645": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11682478": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11940210": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c3778922": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c8088291": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c8107730": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c8654436": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c9461462": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c9946801": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c9946803": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11613603": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11896787": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c9338904": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c11593742": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ],
+    "domain-c8016316": [
+      {
+        "datastore_cluster": "np-cl60-dsc",
+        "name": "np-cl60-dsc",
+        "type": "datastore_cluster",
+        "original": {
+          "datastore_cluster": "np-cl60-dsc",
+          "name": "np-cl60-dsc",
+          "type": "datastore_cluster"
+        }
+      }
+    ]
   },
   "networks": {
     "domain-c10686923": [

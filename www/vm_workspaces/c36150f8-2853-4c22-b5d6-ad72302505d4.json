@@ -3,10 +3,10 @@
   "name": "newonetoo",
   "createdAt": "2025-05-02T19:01:58.064Z",
   "config": {
-    "datacenter": "datacenter-264",
-    "cluster": "domain-c9814669",
-    "datastore_cluster": "derived-cluster-1",
-    "network": "",
+    "datacenter": "EBDC NONPROD",
+    "cluster": "np-cl60-lin",
+    "datastore_cluster": "np-cl60-dsc",
+    "network": "np-lin-vds-989-linux",
     "vm_name": "newonetoo",
     "vm_template": "rhel9-template0314",
     "vm_guest_id": "rhel9_64Guest",
@@ -17,5 +17,5 @@
     "additional_disks": []
   },
   "status": "created",
-  "lastUpdated": "2025-05-03T14:28:24.535Z"
+  "lastUpdated": "2025-05-05T19:20:24.005Z"
 }

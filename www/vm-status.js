@@ -29,13 +29,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Get datacenter value for filtering VMs
-            const datacenterSelect = document.getElementById('datacenter');
-            const datacenter = datacenterSelect ? datacenterSelect.value : '';
-            if (!datacenter) {
-                showVMHealthError('Please select a datacenter.');
-                return;
-            }
             try {
                 // Call the API to get VM health information
                 const response = await fetch('/api/vsphere/vms', {
@@ -46,8 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify({
                         vsphereServer,
                         vsphereUser,
-                        vspherePassword,
-                        datacenter
+                        vspherePassword
                     })
                 });
                 const data = await response.json();
