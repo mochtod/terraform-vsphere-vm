@@ -1,8 +1,8 @@
 {
   "vsphere": {
     "user": "chr\\mochtodpa",
-    "server": "virtualcenter.chrobinson.com",
-    "password": "FEug@qtO3U1sFAJ#R1"
+    "server": "https://virtualcenter.chrobinson.com",
+    "password": "R1pcl@w35562828"
   },
   "netbox": {
     "url": "https://netbox.chrobinson.com",
@@ -13,5 +13,5 @@
     "api_url": "https://ansibleaap.chrobinson.com",
     "api_token": "tIe1xZ3x50QFkqdgxNtcqTjAH4cU9A"
   },
-  "lastUpdated": "2025-05-05T19:27:17.772Z"
+  "lastUpdated": "2025-05-27T20:20:29.995Z"
 }

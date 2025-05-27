@@ -1,0 +1,19 @@
+{
+  "id": "89e99bb1-3b37-4c2f-a80e-1a0b8c3ac1d7",
+  "name": "lin2dv2beta1",
+  "createdAt": "2025-05-27T17:52:21.301Z",
+  "config": {
+    "datacenter": "EBDC PROD",
+    "cluster": "dc2-prod-cl60-linux",
+    "vm_name": "lin2dv2beta1",
+    "vm_template": "",
+    "vm_guest_id": "windows2019srv_64Guest",
+    "vm_cpu": "4",
+    "vm_memory": "32768",
+    "vm_disk_size": "100",
+    "vm_network_adapter_type": "vmxnet3",
+    "additional_disks": []
+  },
+  "status": "created",
+  "lastUpdated": "2025-05-27T20:20:52.979Z"
+}

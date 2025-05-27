@@ -9,22 +9,70 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial flag to prevent multiple calls on first load
     let initialLoad = true;
 
-    // Helper function to get vSphere connection information
+// Helper function to get vSphere connection information
     // Returns connection details object or null if incomplete
     function getVSphereConnectionInfo() {
-        const vspherePassword = document.getElementById('vsphere_password')?.value || '';
+        // Try multiple strategies to find the password field
+        let passwordField = null;
+        let vspherePassword = '';
+        
+        // Strategy 1: Direct ID lookup
+        passwordField = document.getElementById('vsphere_password');
+        
+        // Strategy 2: Query selector fallback
+        if (!passwordField) {
+            passwordField = document.querySelector('input[id="vsphere_password"]');
+        }
+        
+        // Strategy 3: Find by type and name attributes
+        if (!passwordField) {
+            passwordField = document.querySelector('input[type="password"][name="vsphere_password"]');
+        }
+        
+        // Strategy 4: Any password field as a last resort
+        if (!passwordField) {
+            passwordField = document.querySelector('input[type="password"]');
+        }
+        
+        // Get password value if field was found
+        if (passwordField) {
+            vspherePassword = passwordField.value || '';
+        }
+        
         let server = '';
         let user = '';
 
-        // Prioritize global settings
+        // Get server and user from global settings
         if (window.globalSettings && window.globalSettings.vsphere) {
             server = window.globalSettings.vsphere.server || '';
             user = window.globalSettings.vsphere.user || '';
         }
+        
+        // Enhanced logging for troubleshooting
+        console.log("Connection info check:", { 
+            hasServer: !!server, 
+            hasUser: !!user, 
+            hasPassword: !!vspherePassword,
+            passwordFieldFound: !!passwordField,
+            passwordFieldId: passwordField ? passwordField.id : 'not found',
+            passwordFieldType: passwordField ? passwordField.type : 'not found',
+            globalSettingsFound: !!window.globalSettings,
+            globalSettingsComplete: window.globalSettings && 
+                                  window.globalSettings.vsphere && 
+                                  !!window.globalSettings.vsphere.server && 
+                                  !!window.globalSettings.vsphere.user
+        });
 
-        // Return null if any part is missing
+        // Return null if any required part is missing
         if (!server || !user || !vspherePassword) {
-            console.log("Connection info incomplete:", { server: !!server, user: !!user, password: !!vspherePassword });
+            console.log("Connection info incomplete:", { 
+                server: !!server, 
+                user: !!user, 
+                password: !!vspherePassword,
+                serverValue: server ? server.substring(0, 3) + '...' : 'empty',
+                userValue: user ? user.substring(0, 3) + '...' : 'empty',
+                passwordLength: vspherePassword ? vspherePassword.length : 0
+            });
             return null;
         }
 
@@ -34,41 +82,96 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update dropdowns based on available connection info
     function updateInfrastructureDropdowns() {
         console.log("Attempting to update infrastructure dropdowns...");
+        
+        // Ensure global settings are loaded before proceeding
+        if (!window.globalSettings) {
+            console.log("Global settings not yet loaded, waiting...");
+            setTimeout(updateInfrastructureDropdowns, 500);
+            return;
+        }
+        
         const vsphereSettings = getVSphereConnectionInfo();
 
         if (vsphereSettings) {
             console.log("Valid connection info found. Fetching real datacenter data...");
-            // Enable password field interaction if needed, though it's likely already enabled
-            document.getElementById('vsphere_password').disabled = false;
+            
+            // Find and enable password field using the same strategies as in getVSphereConnectionInfo
+            let passwordField = document.getElementById('vsphere_password') || 
+                              document.querySelector('input[id="vsphere_password"]') ||
+                              document.querySelector('input[type="password"][name="vsphere_password"]') ||
+                              document.querySelector('input[type="password"]');
+                              
+            if (passwordField) {
+                passwordField.disabled = false;
+                passwordField.placeholder = "Enter password for this operation";
+            }
 
-            fetchInfrastructureComponent('datacenters', null, datacenterSelect, vsphereSettings)
-                .then(success => {
-                    if (success) {
-                        console.log("Successfully fetched real datacenter data.");
-                        // If fetch worked, potentially load children based on workspace
-                        if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.datacenter) {
-                            if (selectOptionByText(datacenterSelect, window.currentWorkspace.config.datacenter)) {
-                                console.log("Pre-selecting datacenter and loading clusters for workspace:", window.currentWorkspace.config.datacenter);
-                                loadClusters(datacenterSelect.options[datacenterSelect.selectedIndex].text); // Pass name
+            // Use a retry mechanism for fetching datacenters in case of network issues
+            const fetchWithRetry = (attempt = 1, maxAttempts = 3) => {
+                console.log(`Attempting to fetch datacenters (attempt ${attempt}/${maxAttempts})...`);
+                
+                fetchInfrastructureComponent('datacenters', null, datacenterSelect, vsphereSettings)
+                    .then(success => {
+                        if (success) {
+                            console.log("Successfully fetched real datacenter data.");
+                            // If fetch worked, potentially load children based on workspace
+                            if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.datacenter) {
+                                if (selectOptionByText(datacenterSelect, window.currentWorkspace.config.datacenter)) {
+                                    console.log("Pre-selecting datacenter and loading clusters for workspace:", window.currentWorkspace.config.datacenter);
+                                    loadClusters(datacenterSelect.options[datacenterSelect.selectedIndex].text); // Pass name
+                                }
                             }
+                        } else if (attempt < maxAttempts) {
+                            // Retry after a delay
+                            console.log(`Fetch attempt ${attempt} failed. Retrying in 1 second...`);
+                            setTimeout(() => fetchWithRetry(attempt + 1, maxAttempts), 1000);
+                        } else {
+                            console.log("All fetch attempts failed for datacenters.");
+                            // Reset dropdowns as a last resort
+                            resetSelects(true);
                         }
-                    } else {
-                         console.log("Fetch infrastructure component failed for datacenters.");
-                         // Optionally clear or disable selects further down the chain if needed
-                         resetSelects(true); // Reset children if datacenter load failed
-                    }
-                });
+                    })
+                    .catch(error => {
+                        console.error("Error fetching datacenters:", error);
+                        if (attempt < maxAttempts) {
+                            console.log(`Fetch attempt ${attempt} failed with error. Retrying in 1 second...`);
+                            setTimeout(() => fetchWithRetry(attempt + 1, maxAttempts), 1000);
+                        } else {
+                            console.log("All fetch attempts failed for datacenters.");
+                            resetSelects(true);
+                        }
+                    });
+            };
+            
+            // Start the fetch with retry process
+            fetchWithRetry();
+            
         } else {
             // Connection info incomplete, reset and disable dropdowns
             console.log("Connection info incomplete. Resetting and disabling dropdowns.");
             resetSelects(true); // Reset all selects and show placeholder
-             // Disable password input if server/user are missing from settings
+            
+            // Find password field using enhanced method
+            let passwordField = document.getElementById('vsphere_password') || 
+                              document.querySelector('input[id="vsphere_password"]') ||
+                              document.querySelector('input[type="password"][name="vsphere_password"]') ||
+                              document.querySelector('input[type="password"]');
+            
+            // Disable password input if server/user are missing from settings
             if (!window.globalSettings?.vsphere?.server || !window.globalSettings?.vsphere?.user) {
-                 document.getElementById('vsphere_password').disabled = true;
-                 document.getElementById('vsphere_password').placeholder = "Enter vSphere Server/User in Settings first";
+                if (passwordField) {
+                    passwordField.disabled = true;
+                    passwordField.placeholder = "Enter vSphere Server/User in Settings first";
+                    console.log("Password field disabled - missing server/user settings");
+                }
             } else {
-                 document.getElementById('vsphere_password').disabled = false;
-                 document.getElementById('vsphere_password').placeholder = "Enter password for this operation";
+                if (passwordField) {
+                    passwordField.disabled = false;
+                    passwordField.placeholder = "Enter password for this operation";
+                    console.log("Password field enabled - server/user settings available");
+                } else {
+                    console.warn("Password field not found in the DOM, cannot update its state");
+                }
             }
         }
     }
@@ -98,6 +201,88 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
+    // Helper function to fetch infrastructure components from API with datacenter context
+    // Takes vsphereSettings directly to avoid calling getVSphereConnectionInfo multiple times
+    async function fetchInfrastructureComponentWithDatacenter(component, parent, selectElement, vsphereSettings, datacenterContext) {
+        // Guard clause: Ensure we have connection settings before proceeding
+        if (!vsphereSettings) {
+            console.error(`Cannot fetch ${component}: Missing vSphere connection settings.`);
+            selectElement.innerHTML = '<option value="">Connection Error</option>';
+            selectElement.disabled = true;
+            return false; // Indicate failure
+        }
+
+        try {
+            // Show loading state
+            selectElement.innerHTML = '<option value="">Loading...</option>';
+            selectElement.disabled = true; // Disable while loading
+
+            console.log(`Fetching ${component} with parent: ${parent || 'none'}, datacenter context: ${datacenterContext || 'none'}`);
+
+            // Make API call to fetch infrastructure components with a timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+            
+            const response = await fetch('/api/vsphere-infra/components', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    vsphereServer: vsphereSettings.server,
+                    vsphereUser: vsphereSettings.user,
+                    vspherePassword: vsphereSettings.password, // Send password for this specific request
+                    component,
+                    parent, // parent will be the name (e.g., datacenter name, cluster name)
+                    datacenterContext // Add datacenter context for proper filtering
+                }),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            // Check if the response is ok (status code 200-299)
+            if (!response.ok) {
+                // Try to get error details from the response body
+                let errorMsg = `HTTP error ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorData.error || errorMsg;
+                } catch (e) { /* Ignore parsing error */ }
+                console.error(`Error fetching ${component}: ${errorMsg}`);
+                selectElement.innerHTML = `<option value="">API Error</option>`;
+                selectElement.disabled = true;
+                return false; // Indicate failure
+            }
+
+            const data = await response.json();
+
+            if (data.success && data.data && data.data.length > 0) {
+                console.log(`Successfully fetched ${data.data.length} ${component}.`);
+                populateSelect(selectElement, data.data); // Populates and enables the select
+                return true; // Indicate success
+            } else if (data.success && data.data && data.data.length === 0) {
+                 console.log(`Successfully fetched ${component}, but no items found.`);
+                 selectElement.innerHTML = '<option value="">No items found</option>';
+                 selectElement.disabled = true; // Disable if empty
+                 return true; // Still a successful API call, just no data
+            }
+            else {
+                // Handle cases where data.success is false or data.data is missing
+                const errorDetail = data.message || 'Unknown API error structure';
+                console.error(`API Error fetching ${component}: ${errorDetail}`);
+                selectElement.innerHTML = `<option value="">API Error</option>`;
+                selectElement.disabled = true;
+                return false; // Indicate failure
+            }
+        } catch (error) {
+            console.error(`Network or other error fetching ${component}:`, error);
+            selectElement.innerHTML = '<option value="">Fetch Error</option>';
+            selectElement.disabled = true;
+            return false; // Indicate failure
+        }
+    }
+
     // Helper function to fetch infrastructure components from API
     // Takes vsphereSettings directly to avoid calling getVSphereConnectionInfo multiple times
     async function fetchInfrastructureComponent(component, parent, selectElement, vsphereSettings) {
@@ -116,7 +301,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log(`Fetching ${component} with parent: ${parent || 'none'}`);
 
-            // Make API call to fetch infrastructure components
+            // Make API call to fetch infrastructure components with a timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+            
             const response = await fetch('/api/vsphere-infra/components', {
                 method: 'POST',
                 headers: {
@@ -128,8 +316,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     vspherePassword: vsphereSettings.password, // Send password for this specific request
                     component,
                     parent // parent will be the name (e.g., datacenter name, cluster name)
-                })
+                }),
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
 
             // Check if the response is ok (status code 200-299)
             if (!response.ok) {
@@ -209,8 +400,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. Add listener for settings loaded
     document.addEventListener('settingsLoaded', function() {
         console.log('Global settings loaded event received.');
-        updateInfrastructureDropdowns(); // Attempt to load real data
+        // Add small delay to ensure settings are fully loaded and available
+        setTimeout(() => {
+            console.log('Attempting dropdown update after settings loaded...');
+            updateInfrastructureDropdowns(); // Attempt to load real data
+        }, 100);
     });
+    
+    // Also try to initialize if global settings are already available
+    if (window.globalSettings && window.globalSettings.vsphere) {
+        console.log('Global settings already available, updating dropdowns...');
+        updateInfrastructureDropdowns();
+    }
 
     // 3. Add listener for password input change (required for API calls)
     const passwordInput = document.getElementById('vsphere_password');
@@ -311,7 +512,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadDatastoreClusters(clusterName) {
          const vsphereSettings = getVSphereConnectionInfo();
          if (!vsphereSettings) return;
-         fetchInfrastructureComponent('datastoreClusters', clusterName, datastoreClusterSelect, vsphereSettings)
+         
+         // Get the current datacenter context for proper filtering
+         const datacenterName = datacenterSelect.value;
+         fetchInfrastructureComponentWithDatacenter('datastoreClusters', clusterName, datastoreClusterSelect, vsphereSettings, datacenterName)
              .then(success => {
                  if (success && window.currentWorkspace?.config?.datastore_cluster) {
                      selectOptionByText(datastoreClusterSelect, window.currentWorkspace.config.datastore_cluster);
@@ -323,7 +527,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadNetworks(clusterName) {
          const vsphereSettings = getVSphereConnectionInfo();
          if (!vsphereSettings) return;
-         fetchInfrastructureComponent('networks', clusterName, networkSelect, vsphereSettings)
+         
+         // Get the current datacenter context for proper filtering
+         const datacenterName = datacenterSelect.value;
+         fetchInfrastructureComponentWithDatacenter('networks', clusterName, networkSelect, vsphereSettings, datacenterName)
              .then(success => {
                  if (success && window.currentWorkspace?.config?.network) {
                      selectOptionByText(networkSelect, window.currentWorkspace.config.network);
