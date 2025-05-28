@@ -1,16 +1,17 @@
 {
   "vsphere": {
-    "user": "chr\\mochtodpa",
-    "server": "virtualcenter.chrobinson.com"
+    "user": "chr\\svcssbsansible",
+    "server": "virtualcenter.chrobinson.com",
+    "password": "tIe1xZ3x50QFkqdgxNtcqTjAH4cU9A"
   },
   "netbox": {
     "url": "https://netbox.chrobinson.com",
-    "token": "",
+    "token": "40588e3e667339557e4a7dad35b7a59593317b5f",
     "prefix_id": "1292"
   },
   "aap": {
     "api_url": "https://ansibleaap.chrobinson.com",
-    "api_token": ""
+    "api_token": "tIe1xZ3x50QFkqdgxNtcqTjAH4cU9A"
   },
-  "lastUpdated": "2025-05-28T20:16:25.514Z"
+  "lastUpdated": "2025-05-28T20:26:37.467Z"
 }
