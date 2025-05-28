@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if dark mode is enabled in localStorage
     const darkModeEnabled = localStorage.getItem('darkMode') === 'enabled';
     if (darkModeEnabled) {
-        document.body.classList.add('dark-mode');
+        document.body.setAttribute('data-theme', 'dark');
         // Update moon icon to sun when in dark mode
         const themeIcon = document.querySelector('#theme-toggle i');
         if (themeIcon) {
@@ -53,22 +53,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', () => {
-            // Toggle dark mode class on body
-            document.body.classList.toggle('dark-mode');
+            // Check current theme
+            const isDarkMode = document.body.getAttribute('data-theme') === 'dark';
+            
+            if (isDarkMode) {
+                // Switch to light mode
+                document.body.removeAttribute('data-theme');
+                localStorage.setItem('darkMode', 'disabled');
+            } else {
+                // Switch to dark mode
+                document.body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('darkMode', 'enabled');
+            }
             
             // Update icon
             const themeIcon = themeToggle.querySelector('i');
-            if (themeIcon.classList.contains('fa-moon')) {
+            if (!isDarkMode) {
+                // Switching to dark mode - show sun
                 themeIcon.classList.remove('fa-moon');
                 themeIcon.classList.add('fa-sun');
-                localStorage.setItem('darkMode', 'enabled');
             } else {
+                // Switching to light mode - show moon
                 themeIcon.classList.remove('fa-sun');
                 themeIcon.classList.add('fa-moon');
-                localStorage.setItem('darkMode', 'disabled');
             }
             
-            console.log('Theme toggled:', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            console.log('Theme toggled:', document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
         });
     }
     
