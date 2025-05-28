@@ -121,19 +121,19 @@ router.post('/components', async (req, res) => {
                 case 'datastoreClusters':
                     const sampleDatastoreClusters = {
                         'np-cl60-lin': [
-                            { id: 'datastore-cluster-1', name: 'np-cl60-dsc' },
-                            { id: 'datastore-cluster-2', name: 'np-cl60-dsc-ssd' }
+                            { id: 'storage-pod-1', name: 'np-cl60-pod' },
+                            { id: 'storage-pod-2', name: 'np-cl60-pod-ssd' }
                         ],
                         'np-cl61-lin': [
-                            { id: 'datastore-cluster-3', name: 'np-cl61-dsc' },
-                            { id: 'datastore-cluster-4', name: 'np-cl61-dsc-ssd' }
+                            { id: 'storage-pod-3', name: 'np-cl61-pod' },
+                            { id: 'storage-pod-4', name: 'np-cl61-pod-ssd' }
                         ],
                         'pr-cl60-lin': [
-                            { id: 'datastore-cluster-5', name: 'pr-cl60-dsc' },
-                            { id: 'datastore-cluster-6', name: 'pr-cl60-dsc-ssd' }
+                            { id: 'storage-pod-5', name: 'pr-cl60-pod' },
+                            { id: 'storage-pod-6', name: 'pr-cl60-pod-ssd' }
                         ],
                         'np-cl70-lin': [
-                            { id: 'datastore-cluster-7', name: 'np-cl70-dsc' }
+                            { id: 'storage-pod-7', name: 'np-cl70-pod' }
                         ]
                     };
                     responseData = sampleDatastoreClusters[parent] || [];
@@ -142,19 +142,19 @@ router.post('/components', async (req, res) => {
                 case 'networks':
                     const sampleNetworks = {
                         'np-cl60-lin': [
-                            { id: 'network-1', name: 'np-lin-vds-989-linux' },
-                            { id: 'network-2', name: 'np-lin-vds-990-linux' }
+                            { id: 'portgroup-1', name: 'np-lin-vds-989-linux (VLAN: 989)', rawName: 'np-lin-vds-989-linux', vlanId: '989' },
+                            { id: 'portgroup-2', name: 'np-lin-vds-990-linux (VLAN: 990)', rawName: 'np-lin-vds-990-linux', vlanId: '990' }
                         ],
                         'np-cl61-lin': [
-                            { id: 'network-3', name: 'np-lin-vds-991-linux' },
-                            { id: 'network-4', name: 'np-lin-vds-992-linux' }
+                            { id: 'portgroup-3', name: 'np-lin-vds-991-linux (VLAN: 991)', rawName: 'np-lin-vds-991-linux', vlanId: '991' },
+                            { id: 'portgroup-4', name: 'np-lin-vds-992-linux (VLAN: 992)', rawName: 'np-lin-vds-992-linux', vlanId: '992' }
                         ],
                         'pr-cl60-lin': [
-                            { id: 'network-5', name: 'pr-lin-vds-989-linux' },
-                            { id: 'network-6', name: 'pr-lin-vds-990-linux' }
+                            { id: 'portgroup-5', name: 'pr-lin-vds-989-linux (VLAN: 989)', rawName: 'pr-lin-vds-989-linux', vlanId: '989' },
+                            { id: 'portgroup-6', name: 'pr-lin-vds-990-linux (VLAN: 990)', rawName: 'pr-lin-vds-990-linux', vlanId: '990' }
                         ],
                         'np-cl70-lin': [
-                            { id: 'network-7', name: 'np-lin-vds-993-linux' }
+                            { id: 'portgroup-7', name: 'np-lin-vds-993-linux (VLAN: 993)', rawName: 'np-lin-vds-993-linux', vlanId: '993' }
                         ]
                     };
                     responseData = sampleNetworks[parent] || [];

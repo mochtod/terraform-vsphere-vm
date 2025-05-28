@@ -5,6 +5,234 @@ document.addEventListener('DOMContentLoaded', function() {
     window.currentWorkspace = null;
     window.workspaces = [];
     window.globalSettings = null;
+    
+    // Check if dark mode is enabled in localStorage
+    const darkModeEnabled = localStorage.getItem('darkMode') === 'enabled';
+    if (darkModeEnabled) {
+        document.body.classList.add('dark-mode');
+        // Update moon icon to sun when in dark mode
+        const themeIcon = document.querySelector('#theme-toggle i');
+        if (themeIcon) {
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        }
+    }
+    
+    // Load global settings on page load
+    function loadGlobalSettings() {
+        fetch('/api/settings')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.settings) {
+                    window.globalSettings = data.settings;
+                    console.log('Global settings loaded:', window.globalSettings);
+                    
+                    // Dispatch event to notify components that settings are loaded
+                    document.dispatchEvent(new Event('settingsLoaded'));
+                    
+                    // Populate the settings modal with current values if it exists
+                    populateSettingsModal();
+                } else {
+                    console.error('Failed to load global settings:', data.error || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading global settings:', error);
+            });
+    }
+    
+    // Load settings when page loads
+    loadGlobalSettings();
+    
+    // Dark mode toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            // Toggle dark mode class on body
+            document.body.classList.toggle('dark-mode');
+            
+            // Update icon
+            const themeIcon = themeToggle.querySelector('i');
+            if (themeIcon.classList.contains('fa-moon')) {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+                localStorage.setItem('darkMode', 'disabled');
+            }
+            
+            console.log('Theme toggled:', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        });
+    }
+    
+    // Settings Modal Functionality
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsModalBtn = document.getElementById('close-settings-modal');
+    const saveSettingsBtn = document.getElementById('save-settings');
+    const testConnectionsBtn = document.getElementById('test-connections');
+    const openSettingsLink = document.getElementById('open-settings-link');
+    
+    // Open the settings modal
+    function openSettingsModal() {
+        settingsModal.style.display = 'block';
+        populateSettingsModal();
+    }
+    
+    // Close the settings modal
+    function closeSettingsModal() {
+        settingsModal.style.display = 'none';
+    }
+    
+    // Populate the settings modal with current values
+    function populateSettingsModal() {
+        if (!window.globalSettings) return;
+        
+        // Populate vSphere settings
+        if (window.globalSettings.vsphere) {
+            document.getElementById('settings_vsphere_user').value = window.globalSettings.vsphere.user || '';
+            document.getElementById('settings_vsphere_server').value = window.globalSettings.vsphere.server || '';
+            // Don't set the password field for security reasons
+        }
+        
+        // Populate Netbox settings
+        if (window.globalSettings.netbox) {
+            document.getElementById('settings_netbox_url').value = window.globalSettings.netbox.url || '';
+            document.getElementById('settings_netbox_token').value = window.globalSettings.netbox.token || '';
+            document.getElementById('settings_netbox_prefix_id').value = window.globalSettings.netbox.prefix_id || '';
+        }
+        
+        // Populate AAP settings
+        if (window.globalSettings.aap) {
+            document.getElementById('settings_aap_api_url').value = window.globalSettings.aap.api_url || '';
+            document.getElementById('settings_aap_api_token').value = window.globalSettings.aap.api_token || '';
+        }
+    }
+    
+    // Save settings to server
+    function saveSettings() {
+        // Get values from form
+        const vsphereSettings = {
+            user: document.getElementById('settings_vsphere_user').value,
+            server: document.getElementById('settings_vsphere_server').value,
+            password: document.getElementById('settings_vsphere_password').value
+        };
+        
+        const netboxSettings = {
+            url: document.getElementById('settings_netbox_url').value,
+            token: document.getElementById('settings_netbox_token').value,
+            prefix_id: document.getElementById('settings_netbox_prefix_id').value
+        };
+        
+        const aapSettings = {
+            api_url: document.getElementById('settings_aap_api_url').value,
+            api_token: document.getElementById('settings_aap_api_token').value
+        };
+        
+        // Only include non-empty password in the request
+        if (!vsphereSettings.password) {
+            delete vsphereSettings.password;
+        }
+        
+        // Make API call to save settings
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                vsphere: vsphereSettings,
+                netbox: netboxSettings,
+                aap: aapSettings
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Update global settings
+                window.globalSettings = data.settings;
+                
+                // Notify components that settings are updated
+                document.dispatchEvent(new Event('settingsLoaded'));
+                
+                // Show success message
+                showNotification('Settings saved successfully', 'success');
+                
+                // Clear password fields
+                document.getElementById('settings_vsphere_password').value = '';
+                document.getElementById('settings_netbox_token').value = '';
+                document.getElementById('settings_aap_api_token').value = '';
+                
+                // Close modal
+                closeSettingsModal();
+            } else {
+                showNotification(`Error saving settings: ${data.error || 'Unknown error'}`, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification(`Error saving settings: ${error.message}`, 'error');
+        });
+    }
+    
+    // Test connections
+    function testConnections() {
+        // Show testing notification
+        showNotification('Testing connections...', 'default');
+        
+        // Make API call to test connections
+        fetch('/api/vsphere-infra/test-connection', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                vsphereServer: document.getElementById('settings_vsphere_server').value,
+                vsphereUser: document.getElementById('settings_vsphere_user').value,
+                vspherePassword: document.getElementById('settings_vsphere_password').value || 
+                                 (window.globalSettings?.vsphere?.password || '')
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Connection test successful!', 'success');
+            } else {
+                showNotification(`Connection test failed: ${data.error || 'Unknown error'}`, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification(`Connection test error: ${error.message}`, 'error');
+        });
+    }
+    
+    // Event listeners for settings modal
+    if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
+    if (closeSettingsModalBtn) closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettings);
+    if (testConnectionsBtn) testConnectionsBtn.addEventListener('click', testConnections);
+    if (openSettingsLink) openSettingsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        openSettingsModal();
+    });
+    
+    // Close modal if clicked outside
+    window.addEventListener('click', (event) => {
+        if (event.target === settingsModal) {
+            closeSettingsModal();
+        }
+    });
 
     // Tab switching functionality
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -152,7 +380,9 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         
         displayWorkspaces(filteredWorkspaces);
-    }    // Function to create a new workspace
+    }    
+    
+    // Function to create a new workspace
     function createNewWorkspace() {
         const vmName = prompt('Enter a name for the new VM:');
         
@@ -269,7 +499,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             alert(`Error deleting workspace: ${error.message}`);
         });
-    }    // Function to load workspace data into the form
+    }    
+    
+    // Function to load workspace data into the form
     function loadWorkspaceData(workspace) {
         if (!workspace.config) return;
         
@@ -475,13 +707,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading state
         deployedVmsList.innerHTML = '<p>Loading deployed VMs from vSphere...</p>';
         
-        // Get vSphere credentials
-        const vsphereServer = document.getElementById('vsphere_server').value;
-        const vsphereUser = document.getElementById('vsphere_user').value;
-        const vspherePassword = document.getElementById('vsphere_password').value;
+        // Get vSphere credentials from global settings
+        if (!window.globalSettings || !window.globalSettings.vsphere) {
+            deployedVmsList.innerHTML = '<p class="error-message">vSphere connection settings not found. Please check global settings.</p>';
+            return;
+        }
+        
+        const vsphereServer = window.globalSettings.vsphere.server;
+        const vsphereUser = window.globalSettings.vsphere.user;
+        const vspherePassword = window.globalSettings.vsphere.password;
         
         if (!vsphereServer || !vsphereUser || !vspherePassword) {
-            deployedVmsList.innerHTML = '<p class="error-message">Please enter vSphere connection details first.</p>';
+            deployedVmsList.innerHTML = '<p class="error-message">Incomplete vSphere credentials in global settings. Please update settings.</p>';
             return;
         }
         
@@ -561,17 +798,23 @@ document.addEventListener('DOMContentLoaded', function() {
         tabPanels.forEach(p => p.classList.remove('active'));
         document.querySelector('[data-tab="plan"]').classList.add('active');
         document.getElementById('plan-output').classList.add('active');
-          // Get form data
+        
+        // Get form data
         const form = document.getElementById('vm-form');
         const formData = new FormData(form);
         const vmVars = {};
-        let vspherePassword = document.getElementById('vsphere_password').value;
+        
+        // Get vSphere password from global settings
+        let vspherePassword = '';
+        if (window.globalSettings && window.globalSettings.vsphere) {
+            vspherePassword = window.globalSettings.vsphere.password || '';
+        }
         
         console.log('Password found:', vspherePassword ? 'Yes (not shown for security)' : 'No');
         
         if (!vspherePassword) {
-            planOutput.textContent = "Error: vSphere password is required to generate a plan.";
-            showNotification("vSphere password is required", "error");
+            planOutput.textContent = "Error: vSphere password is not set in global settings. Please update settings.";
+            showNotification("vSphere password is required in global settings", "error");
             return;
         }
         
@@ -623,7 +866,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             planOutput.textContent = "Error connecting to backend:\n\n" + error.message;
         });
-    });    // Function to update workspace plan data
+    });    
+    
+    // Function to update workspace plan data
     function updateWorkspacePlanData(workspaceId, planData) {
         fetch(`/api/workspaces/${workspaceId}/plan`, {
             method: 'POST',
@@ -671,10 +916,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Get vSphere password
-        const vspherePassword = document.getElementById('vsphere_password').value;
+        // Get vSphere password from global settings
+        let vspherePassword = '';
+        if (window.globalSettings && window.globalSettings.vsphere) {
+            vspherePassword = window.globalSettings.vsphere.password || '';
+        }
+        
         if (!vspherePassword) {
-            applyOutput.textContent = "Error: vSphere password is required.";
+            applyOutput.textContent = "Error: vSphere password is not set in global settings. Please update settings.";
             return;
         }
         
@@ -810,87 +1059,34 @@ document.addEventListener('DOMContentLoaded', function() {
             deploymentPanel.id = 'deployments-output';
             
             deploymentPanel.innerHTML = `
-                <div class="panel-header">
-                    <h2><i class="fas fa-server"></i> VM Deployments</h2>
-                    <button id="refresh-deployments" class="btn btn-secondary">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                </div>
-                <div class="deployments-container">
-                    <div id="deployments-list" class="deployments-list">
-                        <p>Loading deployments...</p>
-                    </div>
-                    <div id="deployment-details" class="deployment-details">
-                        <p>Select a deployment to view details</p>
+                <div class="code-container">
+                    <div class="code-output">
+                        <h3>Deployment Status</h3>
+                        <div id="deployment-status-list">
+                            <p>Loading deployments...</p>
+                        </div>
                     </div>
                 </div>
             `;
             
-            // Add the panel to the container
-            const panelsContainer = document.querySelector('.tab-panels');
-            if (panelsContainer) {
-                panelsContainer.appendChild(deploymentPanel);
+            // Add panel to tab content
+            const tabContent = document.querySelector('.tab-content');
+            if (tabContent) {
+                tabContent.appendChild(deploymentPanel);
                 tabPanels = document.querySelectorAll('.tab-panel'); // Update panels reference
             }
-            
-            // Add event listener for refresh button
-            setTimeout(() => {
-                const refreshBtn = document.getElementById('refresh-deployments');
-                if (refreshBtn) {
-                    refreshBtn.addEventListener('click', listDeployments);
-                }
-            }, 100);
         }
         
-        // Switch to the deployments tab and refresh
-        document.querySelector('[data-tab="deployments"]').click();
-        
-        // Start polling for status updates
-        pollDeploymentStatus(runDir);
+        // Reload deployments list
+        listDeployments();
     }
     
-    // Function to poll for status updates
-    function pollDeploymentStatus(runDir) {
-        if (!runDir) return;
-        
-        const runDirName = runDir.split('/').pop();
-        let pollingInterval;
-        
-        const checkStatus = () => {
-            fetch(`/api/terraform/status/${runDirName}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Update deployment details if selected
-                    updateDeploymentDetails(runDirName, data);
-                    
-                    // If status is completed or failed, stop polling
-                    if (data.status === 'completed' || data.status === 'failed' || 
-                        data.status === 'destroyed' || data.status === 'destroy_failed') {
-                        clearInterval(pollingInterval);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking deployment status:', error);
-                    clearInterval(pollingInterval);
-                });
-        };
-        
-        // Check immediately and then set up interval
-        checkStatus();
-        pollingInterval = setInterval(checkStatus, 5000); // Poll every 5 seconds
-    }
-    
-    // Function to list all deployments
+    // Function to list deployments
     function listDeployments() {
-        const deploymentsList = document.getElementById('deployments-list');
-        if (!deploymentsList) return;
+        const deploymentStatusList = document.getElementById('deployment-status-list');
+        if (!deploymentStatusList) return;
         
-        deploymentsList.innerHTML = '<p>Loading deployments...</p>';
+        deploymentStatusList.innerHTML = '<p>Loading deployments...</p>';
         
         fetch('/api/terraform/deployments')
             .then(response => {
@@ -900,851 +1096,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(deployments => {
-                if (deployments.length === 0) {
-                    deploymentsList.innerHTML = '<p>No deployments found.</p>';
+                if (!deployments || deployments.length === 0) {
+                    deploymentStatusList.innerHTML = '<p>No deployments found.</p>';
                     return;
                 }
                 
-                let html = '<ul class="deployments">';
-                deployments.forEach(deployment => {
-                    const statusClass = getStatusClass(deployment.status);
-                    const date = new Date(deployment.startTime).toLocaleString();
-                    
-                    html += `
-                        <li class="deployment-item" data-id="${deployment.id}">
+                // Sort deployments by start time, newest first
+                deployments.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+                
+                const deploymentItems = deployments.map(deployment => {
+                    const date = new Date(deployment.startTime);
+                    return `
+                        <div class="deployment-item status-${deployment.status}">
                             <div class="deployment-info">
-                                <span class="deployment-name">${deployment.name}</span>
-                                <span class="deployment-status ${statusClass}">${deployment.status}</span>
-                                <span class="deployment-time">${date}</span>
+                                <div class="deployment-name">${deployment.name}</div>
+                                <div class="deployment-time">${date.toLocaleString()}</div>
                             </div>
-                        </li>
+                            <div class="deployment-status">${deployment.status}</div>
+                        </div>
                     `;
                 });
-                html += '</ul>';
                 
-                deploymentsList.innerHTML = html;
-                
-                // Add click event listeners to deployment items
-                document.querySelectorAll('.deployment-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        const deploymentId = item.getAttribute('data-id');
-                        getDeploymentDetails(deploymentId);
-                        
-                        // Highlight selected deployment
-                        document.querySelectorAll('.deployment-item').forEach(i => {
-                            i.classList.remove('selected');
-                        });
-                        item.classList.add('selected');
-                    });
-                });
-                
-                // Select the first deployment by default
-                if (deployments.length > 0) {
-                    const firstItem = document.querySelector('.deployment-item');
-                    if (firstItem) {
-                        firstItem.click();
-                    }
-                }
+                deploymentStatusList.innerHTML = deploymentItems.join('');
             })
             .catch(error => {
-                deploymentsList.innerHTML = `<p>Error loading deployments: ${error.message}</p>`;
+                deploymentStatusList.innerHTML = `<p class="error-message">Error loading deployments: ${error.message}</p>`;
             });
     }
-    
-    // Function to get deployment details
-    function getDeploymentDetails(deploymentId) {
-        if (!deploymentId) return;
-        
-        const detailsContainer = document.getElementById('deployment-details');
-        if (!detailsContainer) return;
-        
-        detailsContainer.innerHTML = '<p>Loading deployment details...</p>';
-        
-        fetch(`/api/terraform/status/${deploymentId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                updateDeploymentDetails(deploymentId, data);
-            })
-            .catch(error => {
-                detailsContainer.innerHTML = `<p>Error loading deployment details: ${error.message}</p>`;
-            });
-    }
-    
-    // Function to update deployment details
-    function updateDeploymentDetails(deploymentId, data) {
-        const detailsContainer = document.getElementById('deployment-details');
-        if (!detailsContainer) return;
-        
-        const statusClass = getStatusClass(data.status);
-        const startTime = new Date(data.startTime).toLocaleString();
-        const endTime = data.endTime ? new Date(data.endTime).toLocaleString() : 'In progress...';
-        
-        let html = `
-            <div class="deployment-header">
-                <h3>Deployment: ${deploymentId}</h3>
-                <span class="status ${statusClass}">${data.status}</span>
-            </div>
-            <div class="deployment-time-info">
-                <div>Started: ${startTime}</div>
-                <div>Completed: ${endTime}</div>
-            </div>
-        `;
-        
-        // Add logs section
-        html += '<div class="deployment-logs"><h4>Logs</h4><ul>';
-        if (data.logs && data.logs.length > 0) {
-            data.logs.forEach(log => {
-                const logTime = new Date(log.time).toLocaleString();
-                html += `
-                    <li class="log-entry">
-                        <span class="log-time">${logTime}</span>
-                        <span class="log-message">${log.message}</span>
-                        ${log.error ? `<span class="log-error">${log.error}</span>` : ''}
-                    </li>
-                `;
-            });
-        } else {
-            html += '<li>No logs available</li>';
-        }
-        html += '</ul></div>';
-        
-        // Add output section if available
-        if (data.output) {
-            html += `
-                <div class="deployment-output">
-                    <h4>Output</h4>
-                    <pre>${data.output}</pre>
-                </div>
-            `;
-        }
-        
-        // Add action buttons based on status
-        html += '<div class="deployment-actions">';
-        
-        if (data.status === 'completed') {
-            html += `
-                <button class="btn btn-danger destroy-vm" data-id="${deploymentId}">
-                    <i class="fas fa-trash"></i> Destroy VM
-                </button>
-            `;
-        } else if (data.status === 'failed') {
-            html += `
-                <button class="btn btn-primary retry-deployment" data-id="${deploymentId}">
-                    <i class="fas fa-redo"></i> Retry Deployment
-                </button>
-            `;
-        }
-        
-        html += '</div>';
-        
-        detailsContainer.innerHTML = html;
-        
-        // Add event listeners to action buttons
-        setTimeout(() => {
-            const destroyBtn = detailsContainer.querySelector('.destroy-vm');
-            if (destroyBtn) {
-                destroyBtn.addEventListener('click', () => {
-                    if (confirm('Are you sure you want to destroy this VM? This action cannot be undone.')) {
-                        destroyVM(deploymentId);
-                    }
-                });
-            }
-            
-            const retryBtn = detailsContainer.querySelector('.retry-deployment');
-            if (retryBtn) {
-                retryBtn.addEventListener('click', () => {
-                    retryDeployment(deploymentId);
-                });
-            }
-        }, 100);
-    }
-    
-    // Function to destroy a VM
-    function destroyVM(deploymentId) {
-        if (!deploymentId) return;
-        
-        const detailsContainer = document.getElementById('deployment-details');
-        if (!detailsContainer) return;
-        
-        // Show destroying status
-        detailsContainer.innerHTML = '<p>Destroying VM... This may take several minutes.</p>';
-        
-        // Get vSphere password
-        const vspherePassword = document.getElementById('vsphere_password').value;
-        if (!vspherePassword) {
-            detailsContainer.innerHTML = '<p>Error: vSphere password is required to destroy the VM.</p>';
-            return;
-        }
-        
-        // Call API to destroy VM
-        fetch('/api/terraform/destroy', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                runDir: deploymentId,
-                vspherePassword
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                detailsContainer.innerHTML = '<p>VM destroy operation started. Refreshing status...</p>';
-                
-                // Start polling for status updates
-                pollDeploymentStatus(deploymentId);
-                
-                // Refresh deployments list after a short delay
-                setTimeout(listDeployments, 2000);
-            } else {
-                detailsContainer.innerHTML = `<p>Error destroying VM: ${data.message}</p>`;
-            }
-        })
-        .catch(error => {
-            detailsContainer.innerHTML = `<p>Error: ${error.message}</p>`;
-        });
-    }
-    
-    // Function to retry a failed deployment
-    function retryDeployment(deploymentId) {
-        // Implementation would depend on how you want to handle retries
-        // This could involve re-running the plan with the same parameters
-        alert('Retry functionality not implemented yet');
-    }
-    
-    // Helper function to get CSS class based on status
-    function getStatusClass(status) {
-        switch (status) {
-            case 'running':
-            case 'destroying':
-                return 'status-running';
-            case 'completed':
-                return 'status-success';
-            case 'destroyed':
-                return 'status-destroyed';
-            case 'failed':
-            case 'destroy_failed':
-                return 'status-error';
-            default:
-                return '';
-        }
-    }
-    
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('theme-toggle');
-    const html = document.documentElement;
-    const themeIcon = themeToggle.querySelector('i');
-    
-    // Check for saved theme preference or use system preference
-    const getCurrentTheme = () => {
-        const savedTheme = localStorage.getItem('theme');
-        
-        if (savedTheme) {
-            return savedTheme;
-        }
-        
-        // Use system preference as fallback
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    };
-    
-    // Apply theme based on current setting
-    const applyTheme = (theme) => {
-        if (theme === 'dark') {
-            html.setAttribute('data-theme', 'dark');
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
-        } else {
-            html.removeAttribute('data-theme');
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
-        }
-    };
-    
-    // Initialize theme
-    applyTheme(getCurrentTheme());
-    
-    // Handle theme toggle click
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        
-        // Save preference
-        localStorage.setItem('theme', currentTheme);
-        
-        // Apply theme
-        applyTheme(currentTheme);
-    });
-    
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        // Only apply if user hasn't set a preference
-        if (!localStorage.getItem('theme')) {
-            applyTheme(e.matches ? 'dark' : 'light');
-        }
-    });
-    
-    // Add a tab for deployed VMs
-    function addDeployedVMsTab() {
-        // Check if the tab already exists
-        if (document.getElementById('deployed-vms-output')) {
-            return;
-        }
-        
-        // Create tab button
-        const deployedVMsTabBtn = document.createElement('button');
-        deployedVMsTabBtn.className = 'tab-btn';
-        deployedVMsTabBtn.setAttribute('data-tab', 'deployed-vms');
-        deployedVMsTabBtn.innerHTML = '<i class="fas fa-server"></i> Deployed VMs';
-        
-        // Add the button to the tabs
-        const tabsContainer = document.querySelector('.tabs');
-        if (tabsContainer) {
-            tabsContainer.appendChild(deployedVMsTabBtn);
-        }
-        
-        // Create tab panel
-        const deployedVMsPanel = document.createElement('div');
-        deployedVMsPanel.id = 'deployed-vms-output';
-        deployedVMsPanel.className = 'tab-panel';
-        
-        deployedVMsPanel.innerHTML = `
-            <div class="panel-header">
-                <h3>Currently Deployed VMs</h3>
-                <button id="refresh-vms" class="btn btn-small">
-                    <i class="fas fa-sync"></i> Refresh
-                </button>
-            </div>
-            <div id="deployed-vms-list" class="deployed-vms-list">
-                <p>Loading deployed VMs...</p>
-            </div>
-        `;
-        
-        // Add the panel to the tab content
-        const tabContent = document.querySelector('.tab-content');
-        if (tabContent) {
-            tabContent.appendChild(deployedVMsPanel);
-        }
-        
-        // Add click handler for the tab button
-        deployedVMsTabBtn.addEventListener('click', () => {
-            // Remove active class from all buttons and panels
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            
-            // Add active class to this button and panel
-            deployedVMsTabBtn.classList.add('active');
-            deployedVMsPanel.classList.add('active');
-            
-            // Load the deployed VMs
-            loadDeployedVMs();
-        });
-        
-        // Add click handler for refresh button
-        setTimeout(() => {
-            const refreshBtn = document.getElementById('refresh-vms');
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', loadDeployedVMs);
-            }
-        }, 100);
-    }
-    
-    // Function to load and display all deployed VMs
-    function loadDeployedVMs() {
-        const deployedVMsList = document.getElementById('deployed-vms-list');
-        if (!deployedVMsList) return;
-        
-        deployedVMsList.innerHTML = '<p>Loading deployed VMs...</p>';
-        
-        fetch('/api/deployed-vms')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.deployedVMs && data.deployedVMs.length > 0) {
-                    const vmItems = data.deployedVMs.map(vm => `
-                        <div class="vm-item" data-id="${vm.id}">
-                            <div class="vm-info">
-                                <div class="vm-name">${vm.vmName}</div>
-                                <div class="vm-details">
-                                    Workspace: ${vm.name} | 
-                                    CPU: ${vm.config.cpu} cores | 
-                                    Memory: ${vm.config.memory} MB | 
-                                    Disk: ${vm.config.diskSize} GB
-                                </div>
-                                <div class="vm-deployed">
-                                    Deployed: ${new Date(vm.deployedAt).toLocaleString()}
-                                </div>
-                            </div>
-                            <div class="vm-actions">
-                                <button class="select-workspace btn btn-secondary" data-id="${vm.id}">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button class="destroy-vm btn btn-danger" data-id="${vm.id}">
-                                    <i class="fas fa-trash"></i> Destroy
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                    
-                    deployedVMsList.innerHTML = vmItems;
-                    
-                    // Add event listeners to buttons
-                    document.querySelectorAll('.select-workspace').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const workspaceId = e.target.closest('.select-workspace').getAttribute('data-id');
-                            selectWorkspace(workspaceId);
-                        });
-                    });
-                    
-                    document.querySelectorAll('.destroy-vm').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const workspaceId = e.target.closest('.destroy-vm').getAttribute('data-id');
-                            destroyVM(workspaceId);
-                        });
-                    });
-                } else {
-                    deployedVMsList.innerHTML = '<p>No VMs currently deployed.</p>';
-                }
-            })
-            .catch(error => {
-                deployedVMsList.innerHTML = `<p class="error-message">Error loading VMs: ${error.message}</p>`;
-            });
-    }
-    
-    // Function to destroy a VM but keep its workspace
-    function destroyVM(workspaceId) {
-        if (!confirm('Are you sure you want to destroy this VM? This action cannot be undone.')) {
-            return;
-        }
-        
-        // We need the password for vSphere
-        const vspherePassword = document.getElementById('vsphere_password').value;
-        if (!vspherePassword) {
-            alert('Please enter the vSphere password to destroy the VM.');
-            return;
-        }
-        
-        // Show loading notification
-        showNotification('Destroying VM, please wait...', 'warning');
-        
-        fetch('/api/terraform/destroy', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                workspaceId,
-                vspherePassword
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                showNotification('VM destroyed successfully', 'success');
-                
-                // Reload deployed VMs list
-                loadDeployedVMs();
-                
-                // If this is the current workspace, update the UI
-                if (window.currentWorkspace && window.currentWorkspace.id === workspaceId) {
-                    window.currentWorkspace.status = 'destroyed';
-                    
-                    // Add a note to the apply output
-                    const applyOutput = document.getElementById('apply-code');
-                    if (applyOutput) {
-                        applyOutput.textContent += '\n\n// VM has been destroyed';
-                    }
-                }
-            } else {
-                showNotification(`Error destroying VM: ${data.error}`, 'error');
-            }
-        })
-        .catch(error => {
-            showNotification(`Error destroying VM: ${error.message}`, 'error');
-        });
-    }
-    
-    // Initialize deployed VMs tab
-    addDeployedVMsTab();
-    
-    // Settings Modal Functionality
-    const settingsBtn = document.getElementById('settings-btn');
-    const settingsModal = document.getElementById('settings-modal');
-    const closeSettingsBtn = document.getElementById('close-settings-modal');
-    const saveSettingsBtn = document.getElementById('save-settings');
-    const testConnectionsBtn = document.getElementById('test-connections');
-    
-    // Load global settings when the page loads
-    loadGlobalSettings();
-    
-    // Function to load global settings from the server
-    function loadGlobalSettings() {
-        fetch('/api/settings')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Store settings in global variable
-                    window.globalSettings = data.settings;
-                    
-                    // Apply settings to form fields
-                    applyGlobalSettings();
-                    
-                    console.log('Global settings loaded successfully');
-                    
-                    // Dispatch an event to notify that settings are loaded
-                    document.dispatchEvent(new CustomEvent('settingsLoaded', {
-                        detail: { settings: window.globalSettings }
-                    }));
-                } else {
-                    console.error('Error loading global settings:', data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error loading global settings:', error.message);
-            });
-    }
-    
-    // Function to apply global settings to form fields
-    function applyGlobalSettings() {
-        if (!window.globalSettings) return;
-        
-        const settings = window.globalSettings;
-        
-        // Apply vSphere settings to the form if no workspace is selected
-        if (!window.currentWorkspace && settings.vsphere) {
-            const vSphereFields = {
-                vsphere_user: 'settings_vsphere_user',
-                vsphere_server: 'settings_vsphere_server'
-            };
-            
-            // Apply to main form fields if they exist
-            for (const [formKey, settingKey] of Object.entries(vSphereFields)) {
-                const formField = document.getElementById(formKey);
-                const settingField = document.getElementById(settingKey);
-                
-                if (formField && settingField && settings.vsphere[formKey.replace('vsphere_', '')]) {
-                    formField.value = settings.vsphere[formKey.replace('vsphere_', '')];
-                }
-            }
-        }
-        
-        // Apply to settings modal fields
-        if (settings.vsphere) {
-            if (settings.vsphere.user) {
-                document.getElementById('settings_vsphere_user').value = settings.vsphere.user;
-            }
-            if (settings.vsphere.server) {
-                document.getElementById('settings_vsphere_server').value = settings.vsphere.server;
-            }
-            // Don't set password in UI for security reasons
-        }
-        
-        if (settings.netbox) {
-            if (settings.netbox.url) {
-                document.getElementById('settings_netbox_url').value = settings.netbox.url;
-            }
-            if (settings.netbox.prefix_id) {
-                document.getElementById('settings_netbox_prefix_id').value = settings.netbox.prefix_id;
-            }
-            // Don't set token in UI for security reasons
-        }
-        
-        if (settings.aap) {
-            if (settings.aap.api_url) {
-                document.getElementById('settings_aap_api_url').value = settings.aap.api_url;
-            }
-            // Don't set token in UI for security reasons
-        }
-    }
-    
-    // Function to save global settings
-    function saveGlobalSettings() {
-        const settings = {
-            vsphere: {
-                user: document.getElementById('settings_vsphere_user').value,
-                server: document.getElementById('settings_vsphere_server').value,
-                password: document.getElementById('settings_vsphere_password').value
-            },
-            netbox: {
-                url: document.getElementById('settings_netbox_url').value,
-                token: document.getElementById('settings_netbox_token').value,
-                prefix_id: document.getElementById('settings_netbox_prefix_id').value
-            },
-            aap: {
-                api_url: document.getElementById('settings_aap_api_url').value,
-                api_token: document.getElementById('settings_aap_api_token').value
-            }
-        };
-        
-        // Save to server
-        fetch('/api/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(settings)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // Update global settings
-                window.globalSettings = data.settings;
-                
-                // Apply to form fields
-                applyGlobalSettings();
-                
-                // Show success message
-                showNotification('Global settings saved successfully', 'success');
-                
-                // Close modal
-                settingsModal.style.display = 'none';
-                
-                // Apply to main form fields
-                if (!window.currentWorkspace) {
-                    if (settings.vsphere.user) {
-                        document.getElementById('vsphere_user').value = settings.vsphere.user;
-                    }
-                    if (settings.vsphere.server) {
-                        document.getElementById('vsphere_server').value = settings.vsphere.server;
-                    }
-                    if (settings.vsphere.password) {
-                        document.getElementById('vsphere_password').value = settings.vsphere.password;
-                    }
-                }
-            } else {
-                showNotification(`Error saving settings: ${data.error}`, 'error');
-            }
-        })
-        .catch(error => {
-            showNotification(`Error saving settings: ${error.message}`, 'error');
-        });
-    }
-    
-    // Function to test connections
-    function testConnections() {
-        const settings = {
-            vsphere: {
-                user: document.getElementById('settings_vsphere_user').value,
-                server: document.getElementById('settings_vsphere_server').value,
-                password: document.getElementById('settings_vsphere_password').value
-            },
-            netbox: {
-                url: document.getElementById('settings_netbox_url').value,
-                token: document.getElementById('settings_netbox_token').value,
-                prefix_id: document.getElementById('settings_netbox_prefix_id').value
-            }
-        };
-        
-        // Show loading notification
-        showNotification('Testing connections...', 'default');
-        
-        // For now, just validate that values are provided
-        // In a real implementation, you would test these connections via API calls
-        
-        const missingVsphereFields = [];
-        if (!settings.vsphere.user) missingVsphereFields.push('User');
-        if (!settings.vsphere.server) missingVsphereFields.push('Server');
-        if (!settings.vsphere.password) missingVsphereFields.push('Password');
-        
-        const missingNetboxFields = [];
-        if (!settings.netbox.url) missingNetboxFields.push('URL');
-        if (!settings.netbox.token) missingNetboxFields.push('Token');
-        if (!settings.netbox.prefix_id) missingNetboxFields.push('Prefix ID');
-        
-        if (missingVsphereFields.length > 0 || missingNetboxFields.length > 0) {
-            let message = 'Missing required fields:';
-            if (missingVsphereFields.length > 0) {
-                message += `\nVSphere: ${missingVsphereFields.join(', ')}`;
-            }
-            if (missingNetboxFields.length > 0) {
-                message += `\nNetbox: ${missingNetboxFields.join(', ')}`;
-            }
-            showNotification(message, 'error');
-        } else {
-            showNotification('All connection parameters provided. Ready to save.', 'success');
-        }
-    }
-    
-    // Open settings modal - both from header button and from form link
-    settingsBtn.addEventListener('click', openSettingsModal);
-    document.getElementById('open-settings-link').addEventListener('click', function(e) {
-        e.preventDefault();
-        openSettingsModal();
-    });
-    
-    function openSettingsModal() {
-        // Ensure fields are populated with current settings
-        applyGlobalSettings();
-        
-        // Show the modal
-        settingsModal.style.display = 'block';
-    }
-    
-    // Close settings modal
-    closeSettingsBtn.addEventListener('click', () => {
-        settingsModal.style.display = 'none';
-    });
-    
-    // Close modal if clicked outside
-    window.addEventListener('click', (event) => {
-        if (event.target === settingsModal) {
-            settingsModal.style.display = 'none';
-        }
-    });
-    
-    // Save settings
-    saveSettingsBtn.addEventListener('click', saveGlobalSettings);
-    
-    // Test connections
-    testConnectionsBtn.addEventListener('click', testConnections);
-    
-    // --- Additional Disks UI Logic ---
-const additionalDisksSection = document.getElementById('additional-disks-section');
-const additionalDisksList = document.getElementById('additional-disks-list');
-const addDiskBtn = document.getElementById('add-disk-btn');
-
-function getAdditionalDisksFromForm() {
-    const diskInputs = additionalDisksList.querySelectorAll('.additional-disk-input');
-    return Array.from(diskInputs).map(input => Number(input.value)).filter(v => !isNaN(v) && v > 0);
-}
-
-function updateAdditionalDisksUI(disks = []) {
-    additionalDisksList.innerHTML = '';
-    let total = 0;
-    disks.forEach((size, idx) => {
-        total += Number(size) || 0;
-        const diskDiv = document.createElement('div');
-        diskDiv.className = 'additional-disk-row';
-        diskDiv.innerHTML = `
-            <input type="number" class="additional-disk-input" min="1" max="1536" value="${size}" style="width:80px;" /> GB
-            <button type="button" class="remove-disk-btn btn btn-danger btn-small" title="Remove Disk">&times;</button>
-        `;
-        additionalDisksList.appendChild(diskDiv);
-        diskDiv.querySelector('.remove-disk-btn').addEventListener('click', () => {
-            disks.splice(idx, 1);
-            updateAdditionalDisksUI(disks);
-            triggerTfvarsUpdate();
-        });
-        diskDiv.querySelector('.additional-disk-input').addEventListener('input', (e) => {
-            disks[idx] = e.target.value;
-            updateAdditionalDisksUI(disks);
-            triggerTfvarsUpdate();
-        });
-    });
-    // Show total
-    const totalDiv = document.createElement('div');
-    totalDiv.className = 'additional-disks-total';
-    totalDiv.innerHTML = `<strong>Total:</strong> ${total} GB / 1536 GB`;
-    if (total > 1536) {
-        totalDiv.style.color = 'red';
-        totalDiv.innerHTML += ' <span style="color:red;">(Limit exceeded!)</span>';
-    }
-    additionalDisksList.appendChild(totalDiv);
-}
-
-addDiskBtn.addEventListener('click', () => {
-    const disks = getAdditionalDisksFromForm();
-    if (disks.reduce((a, b) => a + b, 0) >= 1536) return;
-    disks.push(1);
-    updateAdditionalDisksUI(disks);
-    triggerTfvarsUpdate();
-});
-
-function triggerTfvarsUpdate() {
-    if (typeof generateTfvars === 'function') generateTfvars();
-}
-
-// Patch generateTfvars to include additional_disks as a list
-const origGenerateTfvars = generateTfvars;
-generateTfvars = function() {
-    const form = document.getElementById('vm-form');
-    const formData = new FormData(form);
-    let tfvarsContent = `# Generated Terraform variables file\n`;
-    tfvarsContent += `# ${new Date().toISOString().split('T')[0]}\n\n`;
-    for (const [key, value] of formData.entries()) {
-        if (key !== 'vsphere_password' && key !== 'additional_disks') {
-            tfvarsContent += `${key} = "${value}"\n`;
-        }
-    }
-    // Add additional_disks as a list
-    const disks = getAdditionalDisksFromForm();
-    if (disks.length > 0) {
-        tfvarsContent += `additional_disks = [${disks.join(', ')}]\n`;
-    }
-    tfvarsContent += `# vsphere_password should be set as an environment variable TF_VAR_vsphere_password for security\n`;
-    document.getElementById('tfvars-code').textContent = tfvarsContent;
-    if (window.currentWorkspace) saveWorkspaceConfig();
-    return tfvarsContent;
-};
-
-// Patch saveWorkspaceConfig to include additional_disks
-const origSaveWorkspaceConfig = saveWorkspaceConfig;
-saveWorkspaceConfig = function() {
-    if (!window.currentWorkspace) return;
-    const form = document.getElementById('vm-form');
-    const formData = new FormData(form);
-    const config = {};
-    for (const [key, value] of formData.entries()) {
-        if (key !== 'vsphere_password' && key !== 'additional_disks') {
-            config[key] = value;
-        }
-    }
-    config.additional_disks = getAdditionalDisksFromForm();
-    fetch(`/api/workspaces/${window.currentWorkspace.id}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config })
-    })
-    .then(response => {
-        if (!response.ok) {
-            console.error('Error saving workspace config:', response.statusText);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            console.log('Workspace config saved successfully');
-        } else {
-            console.error('Error saving workspace config:', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error saving workspace config:', error);
-    });
-};
-
-// Load disks from workspace config if present
-if (window.currentWorkspace && window.currentWorkspace.config && Array.isArray(window.currentWorkspace.config.additional_disks)) {
-    updateAdditionalDisksUI(window.currentWorkspace.config.additional_disks);
-} else {
-    updateAdditionalDisksUI([]);
-}
 });

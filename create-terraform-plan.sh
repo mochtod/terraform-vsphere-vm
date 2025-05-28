@@ -3,6 +3,21 @@
 # This script creates a Terraform plan file with timestamp and stores it in the plans directory
 # It also handles vSphere credentials securely using environment variables
 
+# Source global settings from JSON if available
+if [ -f "./load-global-settings.sh" ]; then
+  echo "Loading credentials from global_settings.json"
+  source ./load-global-settings.sh
+  
+  # Print credential debug info (but hide full password)
+  echo "=== Credential Verification ==="
+  echo "vSphere User: '$TF_VAR_vsphere_user'"
+  echo "vSphere Server: '$TF_VAR_vsphere_server'"
+  echo "vSphere Password: First 3 chars '${TF_VAR_vsphere_password:0:3}***'"
+  echo "=========================="
+else
+  echo "Warning: load-global-settings.sh not found. Will use command line or environment variables for credentials."
+fi
+
 # Default values
 VAR_FILE="machine_input.tfvars"
 DESCRIPTION=""

@@ -16,7 +16,7 @@
     --footer-text-color: #666;
 }
 
-[data-theme="dark"] {
+body.dark-mode {
     /* Dark Theme */
     --primary-color: #4cc2ff;
     --secondary-color: #6f9cda;

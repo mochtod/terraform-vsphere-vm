@@ -16,40 +16,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // Helper function to get vSphere connection information
     // Returns connection details object or null if incomplete
     function getVSphereConnectionInfo() {
-        // Try multiple strategies to find the password field
-        let passwordField = null;
-        let vspherePassword = '';
-        
-        // Strategy 1: Direct ID lookup
-        passwordField = document.getElementById('vsphere_password');
-        
-        // Strategy 2: Query selector fallback
-        if (!passwordField) {
-            passwordField = document.querySelector('input[id="vsphere_password"]');
-        }
-        
-        // Strategy 3: Find by type and name attributes
-        if (!passwordField) {
-            passwordField = document.querySelector('input[type="password"][name="vsphere_password"]');
-        }
-        
-        // Strategy 4: Any password field as a last resort
-        if (!passwordField) {
-            passwordField = document.querySelector('input[type="password"]');
-        }
-        
-        // Get password value if field was found
-        if (passwordField) {
-            vspherePassword = passwordField.value || '';
-        }
-        
+        // Get all vSphere credentials directly from global settings
         let server = '';
         let user = '';
+        let vspherePassword = '';
 
-        // Get server and user from global settings
+        // Get server, user, and password from global settings
         if (window.globalSettings && window.globalSettings.vsphere) {
             server = window.globalSettings.vsphere.server || '';
             user = window.globalSettings.vsphere.user || '';
+            vspherePassword = window.globalSettings.vsphere.password || '';
         }
         
         // Enhanced logging for troubleshooting
@@ -57,14 +33,12 @@ document.addEventListener('DOMContentLoaded', function() {
             hasServer: !!server, 
             hasUser: !!user, 
             hasPassword: !!vspherePassword,
-            passwordFieldFound: !!passwordField,
-            passwordFieldId: passwordField ? passwordField.id : 'not found',
-            passwordFieldType: passwordField ? passwordField.type : 'not found',
             globalSettingsFound: !!window.globalSettings,
             globalSettingsComplete: window.globalSettings && 
                                   window.globalSettings.vsphere && 
                                   !!window.globalSettings.vsphere.server && 
-                                  !!window.globalSettings.vsphere.user
+                                  !!window.globalSettings.vsphere.user &&
+                                  !!window.globalSettings.vsphere.password
         });
 
         // Return null if any required part is missing
@@ -116,17 +90,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (vsphereSettings) {
                 console.log("Valid connection info found. Fetching real datacenter data...");
                 
-                // Find and enable password field using the same strategies as in getVSphereConnectionInfo
-                let passwordField = document.getElementById('vsphere_password') || 
-                                  document.querySelector('input[id="vsphere_password"]') ||
-                                  document.querySelector('input[type="password"][name="vsphere_password"]') ||
-                                  document.querySelector('input[type="password"]');
-                                  
-                if (passwordField) {
-                    passwordField.disabled = false;
-                    passwordField.placeholder = "Enter password for this operation";
-                }
-
                 // Use a retry mechanism for fetching datacenters in case of network issues
                 const fetchWithRetry = async (attempt = 1, maxAttempts = 3) => {
                     console.log(`Attempting to fetch datacenters (attempt ${attempt}/${maxAttempts})...`);
@@ -172,29 +135,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Connection info incomplete, reset and disable dropdowns
                 console.log("Connection info incomplete. Resetting and disabling dropdowns.");
                 resetSelects(true); // Reset all selects and show placeholder
-                
-                // Find password field using enhanced method
-                let passwordField = document.getElementById('vsphere_password') || 
-                                  document.querySelector('input[id="vsphere_password"]') ||
-                                  document.querySelector('input[type="password"][name="vsphere_password"]') ||
-                                  document.querySelector('input[type="password"]');
-                
-                // Disable password input if server/user are missing from settings
-                if (!window.globalSettings?.vsphere?.server || !window.globalSettings?.vsphere?.user) {
-                    if (passwordField) {
-                        passwordField.disabled = true;
-                        passwordField.placeholder = "Enter vSphere Server/User in Settings first";
-                        console.log("Password field disabled - missing server/user settings");
-                    }
-                } else {
-                    if (passwordField) {
-                        passwordField.disabled = false;
-                        passwordField.placeholder = "Enter password for this operation";
-                        console.log("Password field enabled - server/user settings available");
-                    } else {
-                        console.warn("Password field not found in the DOM, cannot update its state");
-                    }
-                }
             }
         } catch (error) {
             if (error.name !== 'AbortError') {
@@ -412,9 +352,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add new options
         data.forEach(item => {
             const option = document.createElement('option');
-            // Use the NAME as the value, as this is what the API expects for subsequent 'parent' filters
-            option.value = item.name;
-            option.textContent = item.name;
+            
+            // Special handling for network items with rawName property
+            // For networks with VLAN IDs, use the rawName as value but display the formatted name
+            if (selectElement.id === 'network' && item.rawName) {
+                option.value = item.rawName; // Use the raw network name without VLAN ID for the value
+                option.textContent = item.name; // Display the formatted name with VLAN ID
+                option.dataset.vlanId = item.vlanId || ''; // Store VLAN ID as data attribute
+            } else {
+                // For all other components, use the name for both value and text
+                option.value = item.name;
+                option.textContent = item.name;
+            }
+            
             option.dataset.id = item.id; // Store ID as data attribute if needed later
             selectElement.appendChild(option);
         });
@@ -460,25 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateInfrastructureDropdowns();
     }
 
-    // 3. Add listener for password input change (required for API calls) with debouncing
-    const passwordInput = document.getElementById('vsphere_password');
-    if (passwordInput) {
-        let passwordTimeout;
-        // Use 'input' for immediate feedback, but debounce to prevent excessive API calls
-        passwordInput.addEventListener('input', function() {
-            console.log('Password input changed.');
-            
-            // Clear existing timeout
-            if (passwordTimeout) {
-                clearTimeout(passwordTimeout);
-            }
-            
-            // Debounce password changes to prevent excessive API calls
-            passwordTimeout = setTimeout(() => {
-                updateInfrastructureDropdowns(); // Re-evaluate connection and attempt fetch
-            }, 500); // Wait 500ms after user stops typing
-        });
-    }
+    // 3. No longer using password input field - all credentials come from settings
 
     // 4. Set initialLoad flag after a delay
     setTimeout(() => {

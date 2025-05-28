@@ -243,7 +243,7 @@ async function getClusters(connectionDetails, datacenter) {
  * Get a list of datastore clusters for a cluster
  * @param {object} connectionDetails - Connection details (server, user, password)
  * @param {string} cluster - Cluster name
- * @param {string} datacenter - Datacenter name (optional, will try to find if not provided)
+ * @param {string} datacenter - Datacenter name (required for vSphere 8.0.3+)
  * @returns {Promise<Array<{id: string, name: string}>>} - List of datastore clusters
  */
 async function getDatastoreClusters(connectionDetails, cluster, datacenter = null) {
@@ -252,39 +252,61 @@ async function getDatastoreClusters(connectionDetails, cluster, datacenter = nul
             throw new Error('Cluster name is required');
         }
         
+        if (!datacenter) {
+            throw new Error('Datacenter name is required for datastore cluster lookup in vSphere 8.0.3+');
+        }
+        
         const env = createGovcEnv(connectionDetails);
         
-        // First try to find all datastore clusters, then filter by cluster if needed
-        let command = 'find -type s';
+        // Use datastore.cluster.info command for vSphere 8.0.3+
+        // The -type sp parameter is not supported in this version
+        let command = 'datastore.cluster.info';
         if (datacenter) {
             command += ` -dc="${datacenter}"`;
         }
         
         const output = await executeGovc(command, env);
         
-        // If we have a specific cluster, filter the results
-        // Datastore clusters in vSphere are typically named with cluster association
-        let filteredOutput = output;
-        if (cluster && output) {
+        // Parse the output to extract datastore cluster names
+        // datastore.cluster.info format is different from find command
+        let parsedOutput = [];
+        if (output) {
             const lines = output.split('\n').filter(line => line.trim() !== '');
-            // For now, return all datastore clusters - in real vSphere environments,
-            // datastore clusters can be shared across multiple compute clusters
-            filteredOutput = lines.join('\n');
+            let currentName = null;
+            
+            // Process the output format of datastore.cluster.info
+            for (const line of lines) {
+                // Look for the name line (in format "Name: cluster-name")
+                if (line.trim().startsWith('Name:')) {
+                    currentName = line.trim().substring(5).trim();
+                    if (currentName) {
+                        parsedOutput.push({
+                            id: `datastore-cluster-${parsedOutput.length + 1}`,
+                            name: currentName
+                        });
+                    }
+                }
+            }
         }
         
-        return parseGovcOutput(filteredOutput, 'datastore-cluster');
+        // If no datastore clusters were found, return empty array
+        if (parsedOutput.length === 0) {
+            console.log(`No datastore clusters found for datacenter ${datacenter}`);
+        }
+        
+        return parsedOutput;
     } catch (error) {
-        console.error(`Error fetching datastore clusters for cluster ${cluster}:`, error);
+        console.error(`Error fetching datastore clusters for cluster ${cluster} in datacenter ${datacenter}:`, error);
         throw error;
     }
 }
 
 /**
- * Get a list of networks for a cluster
+ * Get a list of distributed port groups with VLAN IDs
  * @param {object} connectionDetails - Connection details (server, user, password)
  * @param {string} cluster - Cluster name
  * @param {string} datacenter - Datacenter name (optional, will try to find if not provided)
- * @returns {Promise<Array<{id: string, name: string}>>} - List of networks
+ * @returns {Promise<Array<{id: string, name: string}>>} - List of distributed port groups with VLAN IDs
  */
 async function getNetworks(connectionDetails, cluster, datacenter = null) {
     try {
@@ -294,7 +316,7 @@ async function getNetworks(connectionDetails, cluster, datacenter = null) {
         
         const env = createGovcEnv(connectionDetails);
         
-        // Find all networks, optionally filtering by datacenter
+        // Use find -type n to get all networks, we'll parse them later
         let command = 'find -type n';
         if (datacenter) {
             command += ` -dc="${datacenter}"`;
@@ -302,10 +324,35 @@ async function getNetworks(connectionDetails, cluster, datacenter = null) {
         
         const output = await executeGovc(command, env);
         
-        // Networks in vSphere are typically available across clusters within a datacenter
-        // For now, return all networks - filtering by cluster association would require
-        // additional logic to check which networks are actually available to the cluster
-        return parseGovcOutput(output, 'network');
+        // Parse all networks from find -type n output
+        const networks = [];
+        
+        if (output) {
+            const lines = output.split('\n').filter(line => line.trim() !== '');
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const name = line.split('/').pop();
+                
+                if (name) {
+                    // Check if name contains a pattern that might indicate a VLAN ID
+                    const vlanMatch = name.match(/\-(\d{2,4})\-/);
+                    const vlanId = vlanMatch ? vlanMatch[1] : '';
+                    
+                    // Format as "portgroup-name (VLAN: ID)" if VLAN ID found
+                    const displayName = vlanId ? `${name} (VLAN: ${vlanId})` : name;
+                    
+                    networks.push({
+                        id: `network-${i+1}`,
+                        name: displayName,
+                        rawName: name,
+                        vlanId: vlanId
+                    });
+                }
+            }
+        }
+        
+        return networks;
     } catch (error) {
         console.error(`Error fetching networks for cluster ${cluster}:`, error);
         throw error;
@@ -322,34 +369,44 @@ async function getVmTemplates(connectionDetails, datacenter = null) {
     try {
         const env = createGovcEnv(connectionDetails);
         
-        // Find all VMs, then we'll need to identify which ones are templates
-        let command = 'find -type m';
+        // First find all VMs with -type m
+        let findCommand = 'find -type m';
         if (datacenter) {
-            command += ` -dc="${datacenter}"`;
+            findCommand += ` -dc="${datacenter}"`;
         }
         
-        const output = await executeGovc(command, env);
+        const findOutput = await executeGovc(findCommand, env);
         
-        if (!output) {
+        if (!findOutput) {
             return [];
         }
         
-        // Parse all VMs
-        const allVms = parseGovcOutput(output, 'template');
+        // Parse all VM paths
+        const vmPaths = findOutput.split('\n').filter(line => line.trim() !== '');
+        const templates = [];
         
-        // For now, return all VMs as potential templates
-        // In a real implementation, we'd need to check each VM's config to see if it's marked as a template
-        // This could be done with additional govc vm.info calls for each VM
-        // For now, we'll assume VMs in certain folders (like /Templates) are templates
-        const templates = allVms.filter(vm => {
-            const vmPath = output.split('\n')[allVms.indexOf(vm)];
-            return vmPath && (
-                vmPath.toLowerCase().includes('template') ||
-                vmPath.toLowerCase().includes('/vm/') // Common template folder
-            );
-        });
+        // For each VM, check if it's a template
+        for (let i = 0; i < vmPaths.length; i++) {
+            try {
+                const vmPath = vmPaths[i];
+                const infoOutput = await executeGovc(`vm.info -json "${vmPath}"`, env);
+                
+                // Check if this VM is a template from the JSON output
+                if (infoOutput && infoOutput.includes('"Template":true')) {
+                    // Extract the VM name from the path (last segment)
+                    const name = vmPath.split('/').pop();
+                    templates.push({
+                        id: `template-${i+1}`,
+                        name: name
+                    });
+                }
+            } catch (error) {
+                // Skip failed VM lookups
+                console.warn(`Failed to check template status for VM: ${error.message}`);
+            }
+        }
         
-        return templates.length > 0 ? templates : allVms; // Fallback to all VMs if no obvious templates
+        return templates;
     } catch (error) {
         console.error('Error fetching VM templates:', error);
         throw error;

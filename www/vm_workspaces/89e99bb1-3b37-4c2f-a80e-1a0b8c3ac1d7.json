@@ -3,10 +3,10 @@
   "name": "lin2dv2beta1",
   "createdAt": "2025-05-27T17:52:21.301Z",
   "config": {
-    "datacenter": "EBDC NONPROD",
+    "datacenter": "EBDC PROD",
     "cluster": "np-cl60-lin",
-    "datastore_cluster": "",
-    "network": "np-lin-vds-989-linux",
+    "datastore_cluster": "prod-cl50-dsc",
+    "network": "prod-lin-184-linux",
     "vm_name": "lin2dv2beta1",
     "vm_guest_id": "rhel9_64Guest",
     "vm_cpu": "4",
@@ -16,5 +16,5 @@
     "additional_disks": []
   },
   "status": "created",
-  "lastUpdated": "2025-05-27T20:40:05.315Z"
+  "lastUpdated": "2025-05-28T17:02:13.328Z"
 }
