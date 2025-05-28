@@ -12,7 +12,7 @@
     "vm_network_adapter_type": "vmxnet3"
   },
   "status": "deployed",
-  "lastUpdated": "2025-05-28T19:52:25.847Z",
+  "lastUpdated": "2025-05-28T20:16:25.985Z",
   "planPath": "/mnt/c/Users/mochtod/Downloads/terraform-vsphere-vm/www/terraform_runs/sean01-2025-05-28T19-42-45/sean01.tfplan",
   "runDir": "/mnt/c/Users/mochtod/Downloads/terraform-vsphere-vm/www/terraform_runs/sean01-2025-05-28T19-42-45",
   "terraformDir": "/mnt/c/Users/mochtod/Downloads/terraform-vsphere-vm/www/terraform_configs/7cfbb26c-3a90-4aba-8311-b10a82595c38",
