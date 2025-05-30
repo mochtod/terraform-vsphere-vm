@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<RetrievePropertiesExResponse xmlns="urn:vim25"><returnval><objects><obj type="VirtualMachine">vm-1292079</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2IN2AP119</val></propSet></objects><objects><obj type="VirtualMachine">vm-1292078</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2IN2AP118</val></propSet></objects><objects><obj type="VirtualMachine">vm-1292077</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2IN2AP117</val></propSet></objects><objects><obj type="VirtualMachine">vm-9012945</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2TR2AP21</val></propSet></objects><objects><obj type="VirtualMachine">vm-8899988</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2DV2AP407</val></propSet></objects><objects><obj type="VirtualMachine">vm-9012946</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2IN2AP314</val></propSet></objects><objects><obj type="VirtualMachine">vm-9012947</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2DV2AP409</val></propSet></objects><objects><obj type="VirtualMachine">vm-8899956</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2IN2AP313</val></propSet></objects></returnval></RetrievePropertiesExResponse>
+</soapenv:Body>
+</soapenv:Envelope>

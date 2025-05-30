@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/"><Header xmlns="http://schemas.xmlsoap.org/soap/envelope/"><vcSessionCookie>3c946285534cc5c201570b5c74431dfe7ccb554b</vcSessionCookie></Header><Body><PbmRetrieveServiceContent xmlns="urn:pbm"><_this type="PbmServiceInstance">ServiceInstance</_this></PbmRetrieveServiceContent></Body></Envelope>

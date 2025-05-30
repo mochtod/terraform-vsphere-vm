@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<RetrievePropertiesExResponse xmlns="urn:vim25"><returnval><objects><obj type="VirtualMachine">vm-1943004</obj><propSet><name>name</name><val xsi:type="xsd:string">ubuntu18-landscape</val></propSet></objects><objects><obj type="VirtualMachine">vm-1143720</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2DV2SSBS8</val></propSet></objects><objects><obj type="VirtualMachine">vm-1143403</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2DV2SSBS6</val></propSet></objects><objects><obj type="VirtualMachine">vm-1139559</obj><propSet><name>name</name><val xsi:type="xsd:string">CHR2DV2SSBS5</val></propSet></objects><objects><obj type="VirtualMachine">vm-1991169</obj><propSet><name>name</name><val xsi:type="xsd:string">ubuntu18-6</val></propSet></objects></returnval></RetrievePropertiesExResponse>
+</soapenv:Body>
+</soapenv:Envelope>

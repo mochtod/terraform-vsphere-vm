@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/"><Body><RetrievePropertiesEx xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>ClusterComputeResource</type><all>true</all></propSet><objectSet><obj type="ClusterComputeResource">domain-c9891266</obj><skip>false</skip></objectSet></specSet><options></options></RetrievePropertiesEx></Body></Envelope>

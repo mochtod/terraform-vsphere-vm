@@ -27,6 +27,10 @@ app.use('/api/vsphere-infra', vsphereInfraRouter);
 const settings = require('./settings');
 settings.initializeSettings(); // Initialize settings on server start
 
+// Register satellite API routes
+const satelliteRouter = require('./satellite-api-server');
+app.use('/api/satellite', satelliteRouter);
+
 // Directory for storing tfvars files
 const TFVARS_DIR = path.join(__dirname, 'terraform_runs');
 if (!fs.existsSync(TFVARS_DIR)) {
@@ -813,9 +817,9 @@ app.get('/api/settings', (req, res) => {
 
 app.post('/api/settings', (req, res) => {
     try {
-        const { vsphere, netbox } = req.body;
+        const { vsphere, netbox, aap, satellite } = req.body;
         
-        if (!vsphere && !netbox) {
+        if (!vsphere && !netbox && !aap && !satellite) {
             return res.status(400).json({ 
                 success: false, 
                 error: 'No settings provided to update' 
@@ -823,7 +827,7 @@ app.post('/api/settings', (req, res) => {
         }
         
         // Update settings
-        const updatedSettings = settings.updateSettings({ vsphere, netbox });
+        const updatedSettings = settings.updateSettings({ vsphere, netbox, aap, satellite });
         
         res.json({ 
             success: true, 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<RetrievePropertiesExResponse xmlns="urn:vim25"><returnval><objects><obj type="VirtualMachine">vm-7188934</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2aah1</val></propSet></objects><objects><obj type="VirtualMachine">vm-7334481</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2aad1</val></propSet></objects><objects><obj type="VirtualMachine">vm-7188932</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2aac2</val></propSet></objects><objects><obj type="VirtualMachine">vm-7334423</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2aac4</val></propSet></objects><objects><obj type="VirtualMachine">vm-7334422</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2aac3</val></propSet></objects><objects><obj type="VirtualMachine">vm-7188933</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2aac1</val></propSet></objects></returnval></RetrievePropertiesExResponse>
+</soapenv:Body>
+</soapenv:Envelope>

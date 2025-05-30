@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<RetrievePropertiesExResponse xmlns="urn:vim25"><returnval><objects><obj type="Datacenter">datacenter-7402958</obj><propSet><name>name</name><val xsi:type="xsd:string">ebdc-prodk8s</val></propSet></objects><objects><obj type="Datacenter">datacenter-7402963</obj><propSet><name>name</name><val xsi:type="xsd:string">ebdc-npk8s</val></propSet></objects><objects><obj type="Datacenter">datacenter-10686918</obj><propSet><name>name</name><val xsi:type="xsd:string">ebdc-edi</val></propSet></objects><objects><obj type="Datacenter">datacenter-270</obj><propSet><name>name</name><val xsi:type="xsd:string">EBDC PROD</val></propSet></objects><objects><obj type="Datacenter">datacenter-264</obj><propSet><name>name</name><val xsi:type="xsd:string">EBDC NONPROD</val></propSet></objects></returnval></RetrievePropertiesExResponse>
+</soapenv:Body>
+</soapenv:Envelope>

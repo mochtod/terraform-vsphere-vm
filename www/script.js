@@ -118,11 +118,18 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('settings_netbox_token').value = window.globalSettings.netbox.token || '';
             document.getElementById('settings_netbox_prefix_id').value = window.globalSettings.netbox.prefix_id || '';
         }
-        
-        // Populate AAP settings
+          // Populate AAP settings
         if (window.globalSettings.aap) {
             document.getElementById('settings_aap_api_url').value = window.globalSettings.aap.api_url || '';
             document.getElementById('settings_aap_api_token').value = window.globalSettings.aap.api_token || '';
+        }
+        
+        // Populate Satellite settings
+        if (window.globalSettings.satellite) {
+            document.getElementById('settings_satellite_chr_api_server').value = window.globalSettings.satellite.chr_api_server || '';
+            document.getElementById('settings_satellite_url').value = window.globalSettings.satellite.url || '';
+            document.getElementById('settings_satellite_username').value = window.globalSettings.satellite.username || '';
+            // Don't set the password field for security reasons
         }
     }
     
@@ -140,10 +147,16 @@ document.addEventListener('DOMContentLoaded', function() {
             token: document.getElementById('settings_netbox_token').value,
             prefix_id: document.getElementById('settings_netbox_prefix_id').value
         };
-        
-        const aapSettings = {
+          const aapSettings = {
             api_url: document.getElementById('settings_aap_api_url').value,
             api_token: document.getElementById('settings_aap_api_token').value
+        };
+        
+        const satelliteSettings = {
+            chr_api_server: document.getElementById('settings_satellite_chr_api_server').value,
+            url: document.getElementById('settings_satellite_url').value,
+            username: document.getElementById('settings_satellite_username').value,
+            password: document.getElementById('settings_satellite_password').value
         };
         
         // Only include non-empty password in the request
@@ -151,16 +164,20 @@ document.addEventListener('DOMContentLoaded', function() {
             delete vsphereSettings.password;
         }
         
+        if (!satelliteSettings.password) {
+            delete satelliteSettings.password;
+        }
+        
         // Make API call to save settings
         fetch('/api/settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+            },            body: JSON.stringify({
                 vsphere: vsphereSettings,
                 netbox: netboxSettings,
-                aap: aapSettings
+                aap: aapSettings,
+                satellite: satelliteSettings
             })
         })
         .then(response => {
@@ -955,8 +972,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             return response.json();
-        })
-        .then(data => {
+        })        .then(data => {
             if (data.success) {
                 // Display the apply output
                 applyOutput.textContent = data.applyOutput;
@@ -970,12 +986,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Store the apply output in the workspace
                 window.currentWorkspace.applyOutput = data.applyOutput;
                 window.currentWorkspace.vmId = data.vmId;
+                window.currentWorkspace.status = 'deployed';
                 
                 // Save apply details to workspace
                 updateWorkspaceApplyData(window.currentWorkspace.id, data);
                 
                 // Add a link to check VM status
                 addDeploymentStatusTracking(window.currentWorkspace.runDir);
+                
+                // Trigger post-deployment workflow for CHR Satellite integration
+                const deploymentEvent = new CustomEvent('deploymentCompleted', {
+                    detail: { 
+                        workspace: window.currentWorkspace,
+                        vmId: data.vmId,
+                        deploymentTime: new Date().toISOString()
+                    }
+                });
+                document.dispatchEvent(deploymentEvent);
+                
+                // Show VM Customization tab after successful deployment
+                setTimeout(() => {
+                    document.querySelector('[data-tab="vm-customization"]').classList.add('active');
+                    document.getElementById('vm-customization-output').classList.add('active');
+                    // Remove active class from apply tab
+                    document.querySelector('[data-tab="apply"]').classList.remove('active');
+                    document.getElementById('apply-output').classList.remove('active');
+                }, 2000);
             } else {
                 applyOutput.textContent = "Error applying terraform:\n\n" + data.error;
             }

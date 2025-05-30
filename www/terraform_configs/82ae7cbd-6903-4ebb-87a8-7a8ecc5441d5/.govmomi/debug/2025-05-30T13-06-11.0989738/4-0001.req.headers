@@ -1,0 +1,6 @@
+POST /pbm HTTP/1.1
+Host: virtualcenter.chrobinson.com
+Content-Type: text/xml; charset="utf-8"
+Soapaction: urn:pbm/
+User-Agent: terraform-provider-vsphere_v2.12.0_x5 govmomi/0.49.0 (go1.23.8;windows;amd64)
+

@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/"><Body><DestroyView xmlns="urn:vim25"><_this type="ContainerView">session[52d68610-b916-349d-864a-ab6052774e2e]520405e9-bea7-f6dd-57c9-1dc6eea1a3a0</_this></DestroyView></Body></Envelope>

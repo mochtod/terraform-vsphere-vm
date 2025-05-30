@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/"><Body><CreateContainerView xmlns="urn:vim25"><_this type="ViewManager">ViewManager</_this><container type="Datacenter">datacenter-264</container><type>VirtualMachine</type><recursive>true</recursive></CreateContainerView></Body></Envelope>

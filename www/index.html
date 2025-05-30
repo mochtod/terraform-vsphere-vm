@@ -65,13 +65,19 @@
                         <div class="form-group">
                             <label for="vm_name">VM Name</label>
                             <input type="text" id="vm_name" name="vm_name" value="lin2dv2terraform" required>
-                        </div>
-                        <div class="form-group">
+                        </div>                        <div class="form-group">
                             <label for="vm_template">VM Template</label>
                             <select id="vm_template" name="vm_template" required>
                                 <option value="">Select Template</option>
                                 <!-- Template options will be populated dynamically -->
                             </select>
+                        </div>
+                        <div class="form-group" id="host-group-section" style="display: none;">
+                            <label for="vm_host_group">Host Group (Linux only)</label>
+                            <select id="vm_host_group" name="vm_host_group">
+                                <option value="">Loading host groups...</option>
+                            </select>
+                            <small>Select the CHR Satellite host group for this Linux VM</small>
                         </div>
                         <div class="form-group">
                             <label for="vm_guest_id">Guest ID</label>
@@ -261,8 +267,7 @@
                         <small>The ID of the IP prefix in Netbox</small>
                     </div>
                 </div>
-                
-                <div class="settings-section">
+                  <div class="settings-section">
                     <h3>Ansible AAP Configuration</h3>
                     <div class="form-group">
                         <label for="settings_aap_api_url">AAP API URL</label>
@@ -272,6 +277,28 @@
                         <label for="settings_aap_api_token">API Token</label>
                         <input type="password" id="settings_aap_api_token" name="settings_aap_api_token" placeholder="Enter AAP API token">
                         <small>The API token is stored securely on the server.</small>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Satellite/CHR Configuration</h3>
+                    <div class="form-group">
+                        <label for="settings_satellite_chr_api_server">CHR API Server</label>
+                        <input type="text" id="settings_satellite_chr_api_server" name="settings_satellite_chr_api_server" placeholder="http://your-api-server:8000">
+                        <small>CHR API server for registration and host group management</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_satellite_url">Satellite URL</label>
+                        <input type="text" id="settings_satellite_url" name="settings_satellite_url" placeholder="https://satellite.chrobinson.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_satellite_username">Satellite Username</label>
+                        <input type="text" id="settings_satellite_username" name="settings_satellite_username" placeholder="Enter Satellite username">
+                    </div>
+                    <div class="form-group">
+                        <label for="settings_satellite_password">Satellite Password</label>
+                        <input type="password" id="settings_satellite_password" name="settings_satellite_password" placeholder="Enter Satellite password">
+                        <small>Used for Satellite authentication and host group retrieval</small>
                     </div>
                 </div>
 
@@ -285,9 +312,10 @@
                 </div>
             </div>
         </div>
-    </div>
-    
-    <link rel="stylesheet" href="vm-customization.js.css">
+    </div>    <link rel="stylesheet" href="vm-customization.js.css">
+    <script src="satellite-api.js"></script>
+    <script src="host-groups.js"></script>
+    <script src="post-deployment.js"></script>
     <script src="script.js"></script>
     <script src="vm-status.js"></script>
     <script src="vm-customization.js"></script>

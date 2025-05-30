@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<RetrievePropertiesExResponse xmlns="urn:vim25"><returnval><objects><obj type="VirtualMachine">vm-279297</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2sc7</val></propSet></objects><objects><obj type="VirtualMachine">vm-6346736</obj><propSet><name>name</name><val xsi:type="xsd:string">dc2-cf-np-sg-1a</val></propSet></objects><objects><obj type="VirtualMachine">vm-279296</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2sc6</val></propSet></objects><objects><obj type="VirtualMachine">vm-8382920</obj><propSet><name>name</name><val xsi:type="xsd:string">qva2pr2sc30</val></propSet></objects><objects><obj type="VirtualMachine">vm-279298</obj><propSet><name>name</name><val xsi:type="xsd:string">lin2dv2sc8</val></propSet></objects><objects><obj type="VirtualMachine">vm-6346743</obj><propSet><name>name</name><val xsi:type="xsd:string">dc2-cf-np-sg-1b</val></propSet></objects><objects><obj type="Folder">group-v8403355</obj><propSet><name>childType</name><val xsi:type="ArrayOfString"><string xsi:type="xsd:string">Folder</string><string xsi:type="xsd:string">VirtualMachine</string><string xsi:type="xsd:string">VirtualApp</string></val></propSet><propSet><name>name</name><val xsi:type="xsd:string">np-qualys-scanners</val></propSet></objects></returnval></RetrievePropertiesExResponse>
+</soapenv:Body>
+</soapenv:Envelope>

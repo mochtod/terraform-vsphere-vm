@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Transfer-Encoding: chunked
+Content-Type: text/xml;charset=utf-8
+Date: Fri, 30 May 2025 18:06:11 GMT
+Server: Apache
+Set-Cookie: vmware_soap_session=8e8bfd55-221a-4a52-b2dd-620fec8de96a; Secure; HttpOnly
+Vary: Accept-Encoding
+X-Envoy-Upstream-Service-Time: 1
+

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<RetrievePropertiesExResponse xmlns="urn:vim25"><returnval><objects><obj type="DistributedVirtualPortgroup">dvportgroup-6379899</obj><propSet><name>name</name><val xsi:type="xsd:string">Ent-NP|NP-Ent|dc2-cf-np-sg-1a</val></propSet></objects><objects><obj type="DistributedVirtualPortgroup">dvportgroup-693117</obj><propSet><name>name</name><val xsi:type="xsd:string">DC2-NP-DVS-DVUplinks-693116</val></propSet></objects><objects><obj type="DistributedVirtualPortgroup">dvportgroup-693118</obj><propSet><name>name</name><val xsi:type="xsd:string">quarantine</val></propSet></objects><objects><obj type="DistributedVirtualPortgroup">dvportgroup-693211</obj><propSet><name>name</name><val xsi:type="xsd:string">Ent-NP|NP-Ent|Other</val></propSet></objects><objects><obj type="VmwareDistributedVirtualSwitch">dvs-693116</obj><propSet><name>name</name><val xsi:type="xsd:string">DC2-NP-DVS</val></propSet></objects></returnval></RetrievePropertiesExResponse>
+</soapenv:Body>
+</soapenv:Envelope>

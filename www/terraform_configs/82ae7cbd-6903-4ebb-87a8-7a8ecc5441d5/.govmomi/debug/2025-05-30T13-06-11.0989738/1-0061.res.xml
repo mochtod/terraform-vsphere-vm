@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soapenv:Body>
+<RetrievePropertiesExResponse xmlns="urn:vim25"><returnval><objects><obj type="VirtualMachine">vm-12089676</obj><propSet><name>name</name><val xsi:type="xsd:string">eb_rke2_avi_test_np_k8s-se-tbnih</val></propSet></objects><objects><obj type="VirtualMachine">vm-11929492</obj><propSet><name>name</name><val xsi:type="xsd:string">kub2_ran-se-yjlom</val></propSet></objects><objects><obj type="VirtualMachine">vm-11929493</obj><propSet><name>name</name><val xsi:type="xsd:string">kub2_ran-se-yzanq</val></propSet></objects><objects><obj type="VirtualMachine">vm-11647628</obj><propSet><name>name</name><val xsi:type="xsd:string">gslb-se-xsvoy</val></propSet></objects><objects><obj type="VirtualMachine">vm-11647627</obj><propSet><name>name</name><val xsi:type="xsd:string">gslb-se-sklwc</val></propSet></objects><objects><obj type="VirtualMachine">vm-11647625</obj><propSet><name>name</name><val xsi:type="xsd:string">kub1-se-dndes</val></propSet></objects><objects><obj type="VirtualMachine">vm-11647624</obj><propSet><name>name</name><val xsi:type="xsd:string">kub1-se-clswh</val></propSet></objects></returnval></RetrievePropertiesExResponse>
+</soapenv:Body>
+</soapenv:Envelope>

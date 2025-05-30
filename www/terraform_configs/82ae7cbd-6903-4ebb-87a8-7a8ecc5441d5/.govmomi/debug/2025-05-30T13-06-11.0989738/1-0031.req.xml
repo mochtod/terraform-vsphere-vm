@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/"><Body><RetrievePropertiesEx xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>Datacenter</type><pathSet>name</pathSet><pathSet>vmFolder</pathSet><pathSet>hostFolder</pathSet><pathSet>datastoreFolder</pathSet><pathSet>networkFolder</pathSet></propSet><objectSet><obj type="Datacenter">datacenter-264</obj><skip>false</skip></objectSet></specSet><options></options></RetrievePropertiesEx></Body></Envelope>

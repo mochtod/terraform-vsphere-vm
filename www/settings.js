@@ -21,6 +21,12 @@ const DEFAULT_SETTINGS = {
     api_url: "https://ansibleaap.chrobinson.com",
     api_token: ""
   },
+  satellite: {
+    chr_api_server: "http://your-api-server:8000",
+    url: "https://satellite.chrobinson.com",
+    username: "",
+    password: ""
+  },
   lastUpdated: new Date().toISOString()
 };
 
@@ -34,9 +40,8 @@ function initializeSettings() {
     try {
       const currentSettings = JSON.parse(fs.readFileSync(SETTINGS_FILE_PATH, 'utf8'));
       let needsUpdate = false;
-      
-      // Check for missing top-level sections and add them if needed
-      for (const section of ['vsphere', 'netbox', 'aap']) {
+        // Check for missing top-level sections and add them if needed
+      for (const section of ['vsphere', 'netbox', 'aap', 'satellite']) {
         if (!currentSettings[section]) {
           currentSettings[section] = DEFAULT_SETTINGS[section];
           needsUpdate = true;
@@ -104,6 +109,10 @@ function updateSettings(newSettings) {
     
     if (newSettings.aap) {
       updatedSettings.aap = { ...currentSettings.aap, ...newSettings.aap };
+    }
+    
+    if (newSettings.satellite) {
+      updatedSettings.satellite = { ...currentSettings.satellite, ...newSettings.satellite };
     }
     
     fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(updatedSettings, null, 2));
