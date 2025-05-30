@@ -3,13 +3,9 @@
   "name": "lin2dv2terraform-100",
   "createdAt": "2025-05-30T17:51:30.016Z",
   "config": {
-    "datacenter": "EBDC NONPROD",
-    "cluster": "np-cl60-lin",
-    "datastore_cluster": "np-cl60-pod",
-    "network": "np-lin-vds-989-linux",
     "vm_name": "lin2dv2terraform-100",
     "vm_template": "rhel9-template0314",
-    "vm_host_group": "Server_Storage_Tech/Development",
+    "vm_host_group": "",
     "vm_guest_id": "rhel9_64Guest",
     "vm_cpu": "4",
     "vm_memory": "32768",
@@ -17,5 +13,5 @@
     "vm_network_adapter_type": "vmxnet3"
   },
   "status": "created",
-  "lastUpdated": "2025-05-30T18:05:31.663Z"
+  "lastUpdated": "2025-05-30T19:09:46.048Z"
 }

@@ -8,7 +8,7 @@ const SETTINGS_FILE_PATH = path.join(__dirname, 'global_settings.json');
 // Default settings
 const DEFAULT_SETTINGS = {
   vsphere: {
-    user: "chr\\mochtodpa",
+    user: "chr\\svcssbsansible",
     server: "virtualcenter.chrobinson.com",
     // No default password for security reasons
   },
