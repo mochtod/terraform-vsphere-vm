@@ -11,9 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Global variables to track current requests and prevent race conditions
     let currentAbortController = null;
-    let isUpdatingDropdowns = false;
-
-// Helper function to get vSphere connection information
+    let isUpdatingDropdowns = false;    // Helper function to get vSphere connection information
     // Returns connection details object or null if incomplete
     function getVSphereConnectionInfo() {
         // Get all vSphere credentials directly from global settings
@@ -38,19 +36,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                   window.globalSettings.vsphere && 
                                   !!window.globalSettings.vsphere.server && 
                                   !!window.globalSettings.vsphere.user &&
-                                  !!window.globalSettings.vsphere.password
+                                  !!window.globalSettings.vsphere.password,
+            serverValue: server ? server.substring(0, 20) + '...' : 'empty',
+            userValue: user ? user.substring(0, 10) + '...' : 'empty',
+            passwordLength: vspherePassword ? vspherePassword.length : 0
         });
-
+        
         // Return null if any required part is missing
         if (!server || !user || !vspherePassword) {
-            console.log("Connection info incomplete:", { 
-                server: !!server, 
-                user: !!user, 
-                password: !!vspherePassword,
-                serverValue: server ? server.substring(0, 3) + '...' : 'empty',
-                userValue: user ? user.substring(0, 3) + '...' : 'empty',
-                passwordLength: vspherePassword ? vspherePassword.length : 0
-            });
+            console.log("Connection info incomplete - missing credentials in global settings");
             return null;
         }
 

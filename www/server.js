@@ -703,7 +703,7 @@ app.post('/api/workspaces/create', async (req, res) => {
 app.post('/api/workspaces/:id/config', (req, res) => {
     try {
         const workspaceId = req.params.id;
-        const { config } = req.body;
+        const { config, savedTfvars } = req.body;
         
         const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
         
@@ -714,6 +714,11 @@ app.post('/api/workspaces/:id/config', (req, res) => {
         const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
         workspace.config = config;
         workspace.lastUpdated = new Date().toISOString();
+        
+        // Save tfvars if provided
+        if (savedTfvars) {
+            workspace.savedTfvars = savedTfvars;
+        }
         
         fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
         

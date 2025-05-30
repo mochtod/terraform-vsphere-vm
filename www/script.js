@@ -100,8 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeSettingsModal() {
         settingsModal.style.display = 'none';
     }
-    
-    // Populate the settings modal with current values
+      // Populate the settings modal with current values
     function populateSettingsModal() {
         if (!window.globalSettings) return;
         
@@ -109,7 +108,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.globalSettings.vsphere) {
             document.getElementById('settings_vsphere_user').value = window.globalSettings.vsphere.user || '';
             document.getElementById('settings_vsphere_server').value = window.globalSettings.vsphere.server || '';
-            // Don't set the password field for security reasons
+            // Set password field if available (for editing existing credentials)
+            if (window.globalSettings.vsphere.password) {
+                document.getElementById('settings_vsphere_password').value = window.globalSettings.vsphere.password;
+            }
         }
         
         // Populate Netbox settings
@@ -158,13 +160,20 @@ document.addEventListener('DOMContentLoaded', function() {
             username: document.getElementById('settings_satellite_username').value,
             password: document.getElementById('settings_satellite_password').value
         };
-        
-        // Only include non-empty password in the request
-        if (!vsphereSettings.password) {
+          // Only include non-empty password in the request, but preserve existing if empty
+        if (!vsphereSettings.password && window.globalSettings?.vsphere?.password) {
+            // If no new password provided, preserve existing password
+            vsphereSettings.password = window.globalSettings.vsphere.password;
+        } else if (!vsphereSettings.password) {
+            // If no password at all, remove the field
             delete vsphereSettings.password;
         }
         
-        if (!satelliteSettings.password) {
+        if (!satelliteSettings.password && window.globalSettings?.satellite?.password) {
+            // If no new password provided, preserve existing password
+            satelliteSettings.password = window.globalSettings.satellite.password;
+        } else if (!satelliteSettings.password) {
+            // If no password at all, remove the field
             delete satelliteSettings.password;
         }
         
@@ -193,14 +202,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Notify components that settings are updated
                 document.dispatchEvent(new Event('settingsLoaded'));
-                
-                // Show success message
+                  // Show success message
                 showNotification('Settings saved successfully', 'success');
                 
-                // Clear password fields
-                document.getElementById('settings_vsphere_password').value = '';
-                document.getElementById('settings_netbox_token').value = '';
-                document.getElementById('settings_aap_api_token').value = '';
+                // Clear password fields only if they were actually updated
+                if (document.getElementById('settings_vsphere_password').value.trim()) {
+                    document.getElementById('settings_vsphere_password').value = '';
+                }
+                if (document.getElementById('settings_netbox_token').value.trim()) {
+                    document.getElementById('settings_netbox_token').value = '';
+                }
+                if (document.getElementById('settings_aap_api_token').value.trim()) {
+                    document.getElementById('settings_aap_api_token').value = '';
+                }
+                if (document.getElementById('settings_satellite_password').value.trim()) {
+                    document.getElementById('settings_satellite_password').value = '';
+                }
                 
                 // Close modal
                 closeSettingsModal();
@@ -527,8 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert(`Error deleting workspace: ${error.message}`);
         });
     }    
-    
-    // Function to load workspace data into the form
+      // Function to load workspace data into the form
     function loadWorkspaceData(workspace) {
         if (!workspace.config) return;
         
@@ -551,13 +567,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Generate tfvars display
+        // Generate tfvars display with workspace data
         generateTfvars();
         
-        // Update tab content with workspace data
-        
-        // Update tfvars tab
-        document.getElementById('tfvars-code').textContent = generateTfvars();
+        // Load saved tfvars if available
+        if (workspace.savedTfvars) {
+            document.getElementById('tfvars-code').textContent = workspace.savedTfvars;
+            console.log('Loaded saved tfvars from workspace');
+        } else {
+            // Generate fresh tfvars from current form data
+            document.getElementById('tfvars-code').textContent = generateTfvars();
+            console.log('Generated fresh tfvars for workspace');
+        }
         
         // Update plan tab if workspace has plan output
         if (workspace.planOutput) {
@@ -675,9 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         return tfvarsContent;
-    }
-
-    // Function to save current form data to the workspace
+    }    // Function to save current form data to the workspace
     function saveWorkspaceConfig() {
         if (!window.currentWorkspace) return;
         
@@ -692,13 +711,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Save to the server
+        // Generate and save current tfvars
+        const currentTfvars = generateTfvars();
+        
+        // Save to the server with both config and tfvars
         fetch(`/api/workspaces/${window.currentWorkspace.id}/config`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ config })
+            body: JSON.stringify({ 
+                config,
+                savedTfvars: currentTfvars
+            })
         })
         .then(response => {
             if (!response.ok) {
@@ -708,7 +733,10 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (data.success) {
-                console.log('Workspace config saved successfully');
+                // Update the current workspace with the saved data
+                window.currentWorkspace.config = config;
+                window.currentWorkspace.savedTfvars = currentTfvars;
+                console.log('Workspace config and tfvars saved successfully');
             } else {
                 console.error('Error saving workspace config:', data.error);
             }

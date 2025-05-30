@@ -141,27 +141,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return true;
     }
-    
-    // Helper function to get vSphere connection information (reused from infrastructure-dropdowns.js)
+      // Helper function to get vSphere connection information (reused from infrastructure-dropdowns.js)
     function getVSphereConnectionInfo() {
-        // Get password from form (it's always input directly for security reasons)
-        const vspherePassword = document.getElementById('vsphere_password').value;
-        
-        // Try to get server and user from global settings if available
+        // Get credentials from global settings (consistent with infrastructure dropdowns)
         if (window.globalSettings && window.globalSettings.vsphere) {
-            return {
-                server: window.globalSettings.vsphere.server || '',
-                user: window.globalSettings.vsphere.user || '',
-                password: vspherePassword || ''
-            };
+            const server = window.globalSettings.vsphere.server || '';
+            const user = window.globalSettings.vsphere.user || '';
+            const password = window.globalSettings.vsphere.password || '';
+            
+            // Return null if any required part is missing
+            if (!server || !user || !password) {
+                console.log("VM Templates - Connection info incomplete in global settings");
+                return null;
+            }
+            
+            return { server, user, password };
         }
         
-        // Fallback to form fields
-        return {
-            server: document.getElementById('vsphere_server')?.value || '',
-            user: document.getElementById('vsphere_user')?.value || '',
-            password: vspherePassword || ''
-        };
+        console.log("VM Templates - No global settings found");
+        return null;
     }
     
     // Helper function to select an option by text (reused from infrastructure-dropdowns.js)
