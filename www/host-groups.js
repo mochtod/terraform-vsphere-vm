@@ -70,9 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return linuxIndicators.some(indicator => 
             guestId.toLowerCase().includes(indicator)
         );
-    }
-
-    // Show/hide host group section based on template selection
+    }    // Show/hide host group section based on template selection
     function updateHostGroupVisibility() {
         const selectedTemplate = templateSelect.options[templateSelect.selectedIndex];
         const guestId = selectedTemplate?.dataset?.guestId || guestIdInput.value;
@@ -91,6 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
             hostGroupSelect.value = '';
         }
     }
+
+    // Make the function available globally for vm-templates.js to call
+    window.updateHostGroupVisibility = updateHostGroupVisibility;
 
     // Event listeners
     templateSelect.addEventListener('change', function() {

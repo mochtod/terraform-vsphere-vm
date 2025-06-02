@@ -88,10 +88,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const fetchWithRetry = async (attempt = 1, maxAttempts = 3) => {
                     console.log(`Attempting to fetch datacenters (attempt ${attempt}/${maxAttempts})...`);
                     
-                    try {
-                        const success = await fetchInfrastructureComponent('datacenters', null, datacenterSelect, vsphereSettings, currentAbortController.signal);
+                    try {                        const success = await fetchInfrastructureComponent('datacenters', null, datacenterSelect, vsphereSettings, currentAbortController.signal);
                         if (success) {
                             console.log("Successfully fetched real datacenter data.");
+                            
+                            // Dispatch event to notify other components that infrastructure is updated
+                            document.dispatchEvent(new Event('infrastructureUpdated'));
+                            
                             // If fetch worked, potentially load children based on workspace
                             if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.datacenter) {
                                 if (selectOptionByText(datacenterSelect, window.currentWorkspace.config.datacenter)) {

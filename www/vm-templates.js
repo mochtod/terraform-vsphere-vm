@@ -8,8 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial flag to prevent multiple calls on first load
     let initialLoad = true;
-    
-    // Initialize templates when datacenter or cluster changes
+      // Initialize templates when datacenter or cluster changes
     datacenterSelect.addEventListener('change', function() {
         if (this.value) {
             loadTemplates();
@@ -58,8 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             return response.json();
-        })
-        .then(data => {
+        })        .then(data => {
             if (data.success && data.templates && data.templates.length > 0) {
                 // Populate dropdown with fetched templates
                 populateTemplateSelect(data.templates);
@@ -73,7 +71,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     const guestId = selectedOption.dataset.guestId;
                     if (guestId) {
                         guestIdInput.value = guestId;
-                    }                }
+                    }
+                }
+                
+                // Trigger host group visibility update after template selection
+                if (typeof window.updateHostGroupVisibility === 'function') {
+                    window.updateHostGroupVisibility();
+                }
             } else {
                 // No templates found - show appropriate message
                 templateSelect.innerHTML = '<option value="">No templates found</option>';
@@ -93,8 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
             templateSelect.disabled = true;
         });
     }
-    
-    // Function to populate the template select with options
+      // Function to populate the template select with options
     function populateTemplateSelect(templates) {
         // Clear existing options
         templateSelect.innerHTML = '<option value="">Select Template</option>';
@@ -111,7 +114,11 @@ document.addEventListener('DOMContentLoaded', function() {
             option.dataset.guestId = template.guestId;
             option.dataset.guestFullName = template.guestFullName;
             templateSelect.appendChild(option);
-        });    }
+        });
+        
+        // Enable the select
+        templateSelect.disabled = false;
+    }
     
     // Helper function to get vSphere connection information (reused from infrastructure-dropdowns.js)
     function getVSphereConnectionInfo() {
@@ -144,8 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return false;
     }
-    
-    // Add event listener for template selection change
+      // Add event listener for template selection change
     templateSelect.addEventListener('change', function() {
         // When a template is selected, update the guest ID field if available
         if (this.value) {
@@ -155,19 +161,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 guestIdInput.value = guestId;
             }
             
+            // Trigger host group visibility update
+            if (typeof window.updateHostGroupVisibility === 'function') {
+                window.updateHostGroupVisibility();
+            }
+            
             // Generate tfvars if not initial load
             if (!initialLoad && typeof generateTfvars === 'function') {
                 generateTfvars();
             }
         }
-    });
-      // Initialize templates when the page loads
+    });      // Initialize templates when the page loads
     function initializeTemplates() {
         console.log('Initializing VM templates...');
         
         if (typeof window.globalSettings !== 'undefined' && window.globalSettings.vsphere) {
-            console.log('Global settings available, loading real templates...');
-            loadTemplates();
+            console.log('Global settings available, checking if we can load templates...');
+            
+            // Check if we have a datacenter selected (minimum requirement for templates)
+            if (datacenterSelect.value) {
+                console.log('Datacenter selected, loading templates...');
+                loadTemplates();
+            } else {
+                console.log('No datacenter selected yet, showing ready state...');
+                templateSelect.innerHTML = '<option value="">Select datacenter first</option>';
+                templateSelect.disabled = true;
+            }
         } else {
             console.log('Global settings not available yet, showing placeholder...');
             templateSelect.innerHTML = '<option value="">Connect to vSphere...</option>';
@@ -179,8 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
             initialLoad = false;
         }, 1000);
     }
-    
-    // Initialize templates when global settings are loaded
+      // Initialize templates when global settings are loaded
     document.addEventListener('settingsLoaded', function() {
         initializeTemplates();
     });
@@ -190,6 +208,39 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Settings updated, refreshing templates...');
         setTimeout(() => {
             initializeTemplates();
+        }, 500);
+    });
+      // Listen for infrastructure dropdowns being populated (when datacenter gets selected/populated)
+    document.addEventListener('infrastructureUpdated', function() {
+        console.log('Infrastructure updated, checking if templates should be loaded...');
+        setTimeout(() => {
+            if (datacenterSelect.value && window.globalSettings?.vsphere) {
+                console.log('Datacenter available after infrastructure update, loading templates...');
+                loadTemplates();
+            }
+        }, 500);
+    });
+    
+    // Listen for workspace changes to restore template selection
+    document.addEventListener('workspaceLoaded', function() {
+        console.log('Workspace loaded, checking if template should be restored...');
+        setTimeout(() => {
+            if (window.currentWorkspace?.config?.vm_template && templateSelect.options.length > 1) {
+                console.log('Restoring template selection for workspace:', window.currentWorkspace.config.vm_template);
+                if (selectOptionByText(templateSelect, window.currentWorkspace.config.vm_template)) {
+                    // Update guest ID based on template selection
+                    const selectedOption = templateSelect.options[templateSelect.selectedIndex];
+                    const guestId = selectedOption.dataset.guestId;
+                    if (guestId) {
+                        guestIdInput.value = guestId;
+                    }
+                    
+                    // Trigger host group visibility update
+                    if (typeof window.updateHostGroupVisibility === 'function') {
+                        window.updateHostGroupVisibility();
+                    }
+                }
+            }
         }, 500);
     });
     

@@ -4,8 +4,19 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// Path to the govc binary for Linux
-const GOVC_PATH = '/usr/local/bin/govc';
+// Detect if we're running inside WSL
+function isRunningInWSL() {
+    try {
+        // Check for WSL-specific files and environment
+        return fs.existsSync('/proc/version') && 
+               fs.readFileSync('/proc/version', 'utf8').includes('microsoft');
+    } catch (error) {
+        return false;
+    }
+}
+
+// Path to the govc binary - detect WSL vs Windows environment
+const GOVC_PATH = isRunningInWSL() ? '/usr/local/bin/govc' : 'wsl /usr/local/bin/govc';
 
 /**
  * Execute a govc command with the provided environment variables
@@ -15,19 +26,44 @@ const GOVC_PATH = '/usr/local/bin/govc';
  */
 function executeGovc(command, env = {}) {
     return new Promise((resolve, reject) => {
-        // Build the full command for Linux
-        const fullCommand = `${GOVC_PATH} ${command}`;
+        let fullCommand;
+        let execEnv = { ...process.env };
         
-        console.log(`Executing govc command: ${fullCommand}`);
-        console.log(`GOVC_URL: ${env.GOVC_URL}`);
-        console.log(`GOVC_USERNAME: ${env.GOVC_USERNAME}`);
-        console.log(`GOVC_INSECURE: ${env.GOVC_INSECURE}`);
+        if (isRunningInWSL()) {
+            // We're already in WSL, use direct govc execution
+            console.log('🐧 Running in WSL - using direct govc execution');
+            
+            // Set environment variables directly
+            if (env.GOVC_URL) execEnv.GOVC_URL = env.GOVC_URL;
+            if (env.GOVC_USERNAME) execEnv.GOVC_USERNAME = env.GOVC_USERNAME;
+            if (env.GOVC_PASSWORD) execEnv.GOVC_PASSWORD = env.GOVC_PASSWORD;
+            if (env.GOVC_INSECURE) execEnv.GOVC_INSECURE = env.GOVC_INSECURE;
+            
+            fullCommand = `/usr/local/bin/govc ${command}`;
+        } else {
+            // We're on Windows, use WSL wrapper
+            console.log('🪟 Running on Windows - using WSL wrapper');
+            
+            // Build environment variable string for WSL - properly escape values
+            const envVars = [];
+            if (env.GOVC_URL) envVars.push(`GOVC_URL='${env.GOVC_URL}'`);
+            if (env.GOVC_USERNAME) envVars.push(`GOVC_USERNAME='${env.GOVC_USERNAME}'`);
+            if (env.GOVC_PASSWORD) envVars.push(`GOVC_PASSWORD='${env.GOVC_PASSWORD}'`);
+            if (env.GOVC_INSECURE) envVars.push(`GOVC_INSECURE='${env.GOVC_INSECURE}'`);
+            
+            // Build the full command with environment variables for WSL
+            const envString = envVars.join(' ');
+            fullCommand = `wsl bash -c "${envString} /usr/local/bin/govc ${command}"`;
+        }
         
-        // Execute the command with environment variables
-        exec(fullCommand, { env: { ...process.env, ...env } }, (error, stdout, stderr) => {
+        console.log(`🚀 Executing: ${fullCommand}`);
+        
+        // Execute the command
+        exec(fullCommand, { env: execEnv }, (error, stdout, stderr) => {
             if (error) {
                 console.error(`govc command error: ${error.message}`);
                 console.error(`stderr: ${stderr}`);
+                console.error(`Command was: ${fullCommand}`);
                 return reject(error);
             }
             
@@ -84,8 +120,6 @@ function createGovcEnv(connectionDetails) {
     
     // For govc, try the simple server URL first (without /sdk)
     let url = server;
-    
-    console.log(`Setting GOVC environment - URL: ${url}, Username: ${username}`);
     
     return {
         GOVC_URL: url,
@@ -173,7 +207,6 @@ async function getDatacenters(connectionDetails) {
 
     for (let i = 0; i < formats.length; i++) {
         const format = formats[i];
-        console.log(`Trying format ${i + 1}: Protocol="${format.protocol}", URL suffix="${format.urlSuffix}", Username="${format.user}"`);
         
         try {
             // Build URL with current format
@@ -196,17 +229,12 @@ async function getDatacenters(connectionDetails) {
                 GOVC_INSECURE: '1'
             };
             
-            console.log(`Testing with URL: ${server}, Username: ${format.user}`);
             const output = await executeGovc('ls', env);
-            console.log(`Success with format ${i + 1}!`);
             return parseGovcOutput(output, 'datacenter');
             
         } catch (error) {
-            console.error(`Format ${i + 1} failed:`, error.message);
-            
             // If this is the last format, throw the error
             if (i === formats.length - 1) {
-                console.error('All authentication formats failed');
                 throw error;
             }
         }
@@ -284,11 +312,6 @@ async function getDatastoreClusters(connectionDetails, cluster, datacenter = nul
             }
         }
         
-        // If no datastore clusters were found, return empty array
-        if (parsedOutput.length === 0) {
-            console.log(`No datastore clusters found for datacenter ${datacenter}`);
-        }
-        
         return parsedOutput;
     } catch (error) {
         console.error(`Error fetching datastore clusters for cluster ${cluster} in datacenter ${datacenter}:`, error);
@@ -358,14 +381,12 @@ async function getNetworks(connectionDetails, cluster, datacenter = null) {
  * Get VM templates efficiently - only searches for VMs marked as templates
  * @param {object} connectionDetails - Connection details (server, user, password)
  * @param {string} datacenter - Datacenter name (optional, will try to find if not provided)  
- * @returns {Promise<Array<{id: string, name: string}>>} - List of VM templates
+ * @returns {Promise<Array<{id: string, name: string, path: string, guestId: string, guestFullName: string}>>} - List of VM templates with guest OS information
  */
 async function getVmTemplates(connectionDetails, datacenter = null) {
     try {
         const env = createGovcEnv(connectionDetails);
         const templates = [];
-        
-        console.log('Searching for VM templates...');
         
         // Method 1: Use find with template config filter - most efficient
         // This directly finds VMs where config.template = true
@@ -375,26 +396,61 @@ async function getVmTemplates(connectionDetails, datacenter = null) {
                 findCommand = `find /${datacenter} -type m -config.template true`;
             }
             
-            console.log(`Executing: govc ${findCommand}`);
             const findOutput = await executeGovc(findCommand, env);
             
             if (findOutput && findOutput.trim()) {
                 const templatePaths = findOutput.split('\n').filter(line => line.trim() !== '');
-                console.log(`Found ${templatePaths.length} templates using config.template filter`);
                 
-                templatePaths.forEach((path, index) => {
-                    const name = path.split('/').pop();
-                    if (name && name.trim() !== '') {
-                        templates.push({
-                            id: `template-${index + 1}`,
-                            name: name,
-                            path: path
-                        });
+                // Get detailed information for each template including guest ID
+                if (templatePaths.length > 0) {
+                    // Process in batches to avoid command line length limits
+                    const batchSize = 10;
+                    for (let i = 0; i < templatePaths.length; i += batchSize) {
+                        const batch = templatePaths.slice(i, i + batchSize);
+                        try {
+                            const infoCommand = `vm.info -json ${batch.map(p => `"${p}"`).join(' ')}`;
+                            const infoOutput = await executeGovc(infoCommand, env);
+                            
+                            if (infoOutput && infoOutput.trim()) {
+                                const vmData = JSON.parse(infoOutput);
+                                const vmArray = Array.isArray(vmData.virtualMachines) ? vmData.virtualMachines : [vmData.virtualMachines].filter(Boolean);
+                                
+                                vmArray.forEach((vm, vmIndex) => {
+                                    if (vm && vm.config) {
+                                        const name = vm.config.name || batch[vmIndex].split('/').pop();
+                                        const guestId = vm.config.guestId || 'otherGuest';
+                                        const guestFullName = vm.config.guestFullName || 'Unknown Guest OS';
+                                        
+                                        templates.push({
+                                            id: `template-${templates.length + 1}`,
+                                            name: name,
+                                            path: batch[vmIndex],
+                                            guestId: guestId,
+                                            guestFullName: guestFullName
+                                        });
+                                    }
+                                });
+                            }
+                        } catch (error) {
+                            console.warn(`Failed to get template details for batch starting at index ${i}: ${error.message}`);
+                            // Fallback: add templates without guest ID info
+                            batch.forEach((path, batchIndex) => {
+                                const name = path.split('/').pop();
+                                if (name && name.trim() !== '') {
+                                    templates.push({
+                                        id: `template-${templates.length + 1}`,
+                                        name: name,
+                                        path: path,
+                                        guestId: 'otherGuest',
+                                        guestFullName: 'Unknown Guest OS'
+                                    });
+                                }
+                            });
+                        }
                     }
-                });
+                }
                 
                 if (templates.length > 0) {
-                    console.log(`Successfully found ${templates.length} VM templates`);
                     return templates;
                 }
             }
@@ -404,8 +460,6 @@ async function getVmTemplates(connectionDetails, datacenter = null) {
         
         // Method 2: Fallback - Use find for powered off VMs and batch check template property
         // This is less efficient but works with older govc versions
-        console.log('Trying fallback method - checking powered off VMs...');
-        
         try {
             let findCommand = 'find / -type m -runtime.powerState poweredOff';
             if (datacenter) {
@@ -416,7 +470,6 @@ async function getVmTemplates(connectionDetails, datacenter = null) {
             
             if (findOutput && findOutput.trim()) {
                 const vmPaths = findOutput.split('\n').filter(line => line.trim() !== '');
-                console.log(`Found ${vmPaths.length} powered off VMs to check for templates`);
                 
                 if (vmPaths.length > 0) {
                     // Process in batches to avoid command line length limits
@@ -429,15 +482,20 @@ async function getVmTemplates(connectionDetails, datacenter = null) {
                             
                             if (infoOutput && infoOutput.trim()) {
                                 const vmData = JSON.parse(infoOutput);
-                                const vmArray = Array.isArray(vmData.VirtualMachines) ? vmData.VirtualMachines : [vmData.VirtualMachines].filter(Boolean);
+                                const vmArray = Array.isArray(vmData.virtualMachines) ? vmData.virtualMachines : [vmData.virtualMachines].filter(Boolean);
                                 
                                 vmArray.forEach((vm, vmIndex) => {
-                                    if (vm && vm.Config && vm.Config.Template === true) {
-                                        const name = vm.Config.Name || batch[vmIndex].split('/').pop();
+                                    if (vm && vm.config && vm.config.template === true) {
+                                        const name = vm.config.name || batch[vmIndex].split('/').pop();
+                                        const guestId = vm.config.guestId || 'otherGuest';
+                                        const guestFullName = vm.config.guestFullName || 'Unknown Guest OS';
+                                        
                                         templates.push({
                                             id: `template-${templates.length + 1}`,
                                             name: name,
-                                            path: batch[vmIndex]
+                                            path: batch[vmIndex],
+                                            guestId: guestId,
+                                            guestFullName: guestFullName
                                         });
                                     }
                                 });
@@ -451,7 +509,7 @@ async function getVmTemplates(connectionDetails, datacenter = null) {
         } catch (error) {
             console.warn('Fallback template search failed:', error.message);
         }
-          console.log(`Found ${templates.length} VM templates total`);
+        
         return templates;
         
     } catch (error) {
@@ -488,4 +546,3 @@ module.exports = {
     getVmTemplates,
     testConnection
 };
-

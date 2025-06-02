@@ -125,13 +125,15 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('settings_aap_api_url').value = window.globalSettings.aap.api_url || '';
             document.getElementById('settings_aap_api_token').value = window.globalSettings.aap.api_token || '';
         }
-        
-        // Populate Satellite settings
+          // Populate Satellite settings
         if (window.globalSettings.satellite) {
             document.getElementById('settings_satellite_chr_api_server').value = window.globalSettings.satellite.chr_api_server || '';
             document.getElementById('settings_satellite_url').value = window.globalSettings.satellite.url || '';
             document.getElementById('settings_satellite_username').value = window.globalSettings.satellite.username || '';
-            // Don't set the password field for security reasons
+            // Set password field if available (for editing existing credentials)
+            if (window.globalSettings.satellite.password) {
+                document.getElementById('settings_satellite_password').value = window.globalSettings.satellite.password;
+            }
         }
     }
     

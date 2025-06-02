@@ -21,13 +21,24 @@ router.post('/templates', async (req, res) => {
             user: vsphereUser,
             password: vspherePassword
         };
-        
-        let templates = [];
-          try {
+          let templates = [];
+        try {
+            console.log('DEBUG: Calling govcHelper.getVmTemplates with:', {
+                server: connectionDetails.server,
+                user: connectionDetails.user,
+                hasPassword: !!connectionDetails.password
+            });
+            
             // Attempt to get templates from vSphere using govc
             templates = await govcHelper.getVmTemplates(connectionDetails);
+            
+            console.log('DEBUG: getVmTemplates returned:', {
+                templatesCount: templates.length,
+                firstTemplate: templates.length > 0 ? templates[0] : null
+            });
         } catch (error) {
             console.error(`Error fetching VM templates: ${error.message}`);
+            console.error('Error stack:', error.stack);
             
             // Return error instead of demo data
             return res.status(500).json({
