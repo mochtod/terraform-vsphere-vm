@@ -4,8 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// Path to the govc binary
-const GOVC_PATH = 'wsl /usr/local/bin/govc';
+// Path to the govc binary for Linux
+const GOVC_PATH = '/usr/local/bin/govc';
 
 /**
  * Execute a govc command with the provided environment variables
@@ -15,16 +15,16 @@ const GOVC_PATH = 'wsl /usr/local/bin/govc';
  */
 function executeGovc(command, env = {}) {
     return new Promise((resolve, reject) => {
-        // Build the full command for WSL
-        const fullCommand = `wsl bash -c "export GOVC_URL='${env.GOVC_URL}' GOVC_USERNAME='${env.GOVC_USERNAME}' GOVC_PASSWORD='${env.GOVC_PASSWORD}' GOVC_INSECURE='${env.GOVC_INSECURE}'; /usr/local/bin/govc ${command}"`;
+        // Build the full command for Linux
+        const fullCommand = `${GOVC_PATH} ${command}`;
         
-        console.log(`Executing govc command via WSL: govc ${command}`);
+        console.log(`Executing govc command: ${fullCommand}`);
         console.log(`GOVC_URL: ${env.GOVC_URL}`);
         console.log(`GOVC_USERNAME: ${env.GOVC_USERNAME}`);
         console.log(`GOVC_INSECURE: ${env.GOVC_INSECURE}`);
         
         // Execute the command with environment variables
-        exec(fullCommand, (error, stdout, stderr) => {
+        exec(fullCommand, { env: { ...process.env, ...env } }, (error, stdout, stderr) => {
             if (error) {
                 console.error(`govc command error: ${error.message}`);
                 console.error(`stderr: ${stderr}`);

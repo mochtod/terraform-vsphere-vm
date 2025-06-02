@@ -33,34 +33,32 @@ async function testEndpoint(endpoint, description) {
 async function runDiagnostics() {
     console.log('🔍 Starting WSL API Diagnostics...');
     console.log(`⏰ Time: ${new Date().toISOString()}`);
-    
-    // Test connection status
+      // Test connection status
     await testEndpoint('/api/connection-status', 'Connection Status');
     
-    // Test individual infrastructure endpoints
-    await testEndpoint('/api/datacenters', 'Datacenters');
-    await testEndpoint('/api/clusters', 'Clusters (should fail without datacenter)');
-    await testEndpoint('/api/datastore-clusters', 'Datastore Clusters (should fail without params)');
-    await testEndpoint('/api/networks', 'Networks (should fail without params)');
+    // Test individual infrastructure endpoints (correct routes)
+    await testEndpoint('/api/vsphere-infra/datacenters', 'Datacenters');
+    await testEndpoint('/api/vsphere-infra/clusters', 'Clusters (should fail without datacenter)');
+    await testEndpoint('/api/vsphere-infra/datastore-clusters', 'Datastore Clusters (should fail without params)');
+    await testEndpoint('/api/vsphere-infra/networks', 'Networks (should fail without params)');
     
-    // Test templates
-    await testEndpoint('/api/templates', 'VM Templates');
-    
-    // Test with sample datacenter if we have one
-    const datacenters = await testEndpoint('/api/datacenters', 'Datacenters (retry)');
+    // Test templates (correct route)
+    await testEndpoint('/api/vsphere/templates', 'VM Templates');
+      // Test with sample datacenter if we have one
+    const datacenters = await testEndpoint('/api/vsphere-infra/datacenters', 'Datacenters (retry)');
     if (datacenters && datacenters.length > 0) {
         const firstDC = datacenters[0].name;
         console.log(`\n🎯 Testing with datacenter: "${firstDC}"`);
         
-        await testEndpoint(`/api/clusters?datacenter=${encodeURIComponent(firstDC)}`, `Clusters for ${firstDC}`);
+        await testEndpoint(`/api/vsphere-infra/clusters?datacenter=${encodeURIComponent(firstDC)}`, `Clusters for ${firstDC}`);
         
-        const clusters = await testEndpoint(`/api/clusters?datacenter=${encodeURIComponent(firstDC)}`, `Clusters for ${firstDC} (retry)`);
+        const clusters = await testEndpoint(`/api/vsphere-infra/clusters?datacenter=${encodeURIComponent(firstDC)}`, `Clusters for ${firstDC} (retry)`);
         if (clusters && clusters.length > 0) {
             const firstCluster = clusters[0].name;
             console.log(`\n🎯 Testing with cluster: "${firstCluster}"`);
             
-            await testEndpoint(`/api/datastore-clusters?cluster=${encodeURIComponent(firstCluster)}&datacenter=${encodeURIComponent(firstDC)}`, `Datastore Clusters for ${firstCluster}`);
-            await testEndpoint(`/api/networks?cluster=${encodeURIComponent(firstCluster)}&datacenter=${encodeURIComponent(firstDC)}`, `Networks for ${firstCluster}`);
+            await testEndpoint(`/api/vsphere-infra/datastore-clusters?cluster=${encodeURIComponent(firstCluster)}&datacenter=${encodeURIComponent(firstDC)}`, `Datastore Clusters for ${firstCluster}`);
+            await testEndpoint(`/api/vsphere-infra/networks?cluster=${encodeURIComponent(firstCluster)}&datacenter=${encodeURIComponent(firstDC)}`, `Networks for ${firstCluster}`);
         }
     }
     
