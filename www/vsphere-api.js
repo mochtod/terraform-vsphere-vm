@@ -23,22 +23,17 @@ router.post('/templates', async (req, res) => {
         };
         
         let templates = [];
-        
-        try {
+          try {
             // Attempt to get templates from vSphere using govc
             templates = await govcHelper.getVmTemplates(connectionDetails);
         } catch (error) {
             console.error(`Error fetching VM templates: ${error.message}`);
             
-            // Fallback to sample templates if govc fails
-            templates = [
-                { id: 'template-1', name: 'rhel8-template' },
-                { id: 'template-2', name: 'rhel9-template' },
-                { id: 'template-3', name: 'ubuntu-20.04-template' },
-                { id: 'template-4', name: 'ubuntu-22.04-template' },
-                { id: 'template-5', name: 'windows-2019-template' },
-                { id: 'template-6', name: 'windows-2022-template' }
-            ];
+            // Return error instead of demo data
+            return res.status(500).json({
+                success: false,
+                error: `Failed to fetch VM templates: ${error.message}`
+            });
         }
         
         return res.json({

@@ -21,15 +21,15 @@ document.addEventListener('DOMContentLoaded', function() {
             loadTemplates();
         }
     });
-    
-    // Function to load VM templates from vSphere
+      // Function to load VM templates from vSphere
     function loadTemplates() {
         // Get vSphere connection info
         const vsphereSettings = getVSphereConnectionInfo();
         
-        if (!vsphereSettings.server || !vsphereSettings.user || !vsphereSettings.password) {
-            // If connection details aren't available, use demo values
-            populateSelectWithDemoTemplates(templateSelect);
+        if (!vsphereSettings || !vsphereSettings.server || !vsphereSettings.user || !vsphereSettings.password) {
+            // Show connection error - no fallback data
+            templateSelect.innerHTML = '<option value="">Connection Error - Check vSphere credentials</option>';
+            templateSelect.disabled = true;
             return;
         }
         
@@ -73,19 +73,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     const guestId = selectedOption.dataset.guestId;
                     if (guestId) {
                         guestIdInput.value = guestId;
-                    }
-                }
+                    }                }
             } else {
-                // Fall back to demo data if API call fails or returns no data
-                populateSelectWithDemoTemplates(templateSelect);
+                // No templates found - show appropriate message
+                templateSelect.innerHTML = '<option value="">No templates found</option>';
+                templateSelect.disabled = true;
             }
         })
         .catch(error => {
             console.error('Error fetching VM templates:', error);
-            populateSelectWithDemoTemplates(templateSelect);
-        })
-        .finally(() => {
-            templateSelect.disabled = false;
+            // Show fetch error - no fallback data
+            let errorMessage = 'Fetch Error';
+            if (error.message.includes('401') || error.message.includes('403')) {
+                errorMessage = 'Authentication Error - Check credentials';
+            } else if (error.message.includes('Network')) {
+                errorMessage = 'Network Error - Check vSphere server';
+            }
+            templateSelect.innerHTML = `<option value="">${errorMessage}</option>`;
+            templateSelect.disabled = true;
         });
     }
     
@@ -106,42 +111,9 @@ document.addEventListener('DOMContentLoaded', function() {
             option.dataset.guestId = template.guestId;
             option.dataset.guestFullName = template.guestFullName;
             templateSelect.appendChild(option);
-        });
-    }
+        });    }
     
-    // Function to populate with demo template data
-    function populateSelectWithDemoTemplates(selectElement) {
-        // Clear existing options
-        selectElement.innerHTML = '<option value="">Select Template</option>';
-        
-        // Add demo template options
-        const demoTemplates = [
-            { name: 'rhel9-template0314', guestId: 'rhel9_64Guest', guestFullName: 'Red Hat Enterprise Linux 9 (64-bit)' },
-            { name: 'rhel8-template0215', guestId: 'rhel8_64Guest', guestFullName: 'Red Hat Enterprise Linux 8 (64-bit)' },
-            { name: 'win2022-template0420', guestId: 'windows2019srv_64Guest', guestFullName: 'Microsoft Windows Server 2022 (64-bit)' },
-            { name: 'ubuntu22-template0401', guestId: 'ubuntu64Guest', guestFullName: 'Ubuntu Linux (64-bit)' }
-        ];
-        
-        demoTemplates.forEach(template => {
-            const option = document.createElement('option');
-            option.value = template.name;
-            option.textContent = template.name;
-            option.dataset.guestId = template.guestId;
-            option.dataset.guestFullName = template.guestFullName;
-            selectElement.appendChild(option);
-        });
-        
-        // Enable the select element
-        selectElement.disabled = false;
-        
-        // If we have a workspace config with a template, try to select it
-        if (window.currentWorkspace && window.currentWorkspace.config && window.currentWorkspace.config.vm_template) {
-            selectOptionByText(selectElement, window.currentWorkspace.config.vm_template);
-        }
-        
-        return true;
-    }
-      // Helper function to get vSphere connection information (reused from infrastructure-dropdowns.js)
+    // Helper function to get vSphere connection information (reused from infrastructure-dropdowns.js)
     function getVSphereConnectionInfo() {
         // Get credentials from global settings (consistent with infrastructure dropdowns)
         if (window.globalSettings && window.globalSettings.vsphere) {
@@ -189,15 +161,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
-    // Initialize templates when the page loads
+      // Initialize templates when the page loads
     function initializeTemplates() {
-        // If a datacenter is already selected, load templates
-        if (datacenterSelect.value) {
+        console.log('Initializing VM templates...');
+        
+        if (typeof window.globalSettings !== 'undefined' && window.globalSettings.vsphere) {
+            console.log('Global settings available, loading real templates...');
             loadTemplates();
         } else {
-            // Otherwise use demo data
-            populateSelectWithDemoTemplates(templateSelect);
+            console.log('Global settings not available yet, showing placeholder...');
+            templateSelect.innerHTML = '<option value="">Connect to vSphere...</option>';
+            templateSelect.disabled = true;
         }
         
         // Set initial load to false after a delay
@@ -211,11 +185,20 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeTemplates();
     });
     
+    // Refresh templates when settings are updated
+    document.addEventListener('settingsUpdated', function() {
+        console.log('Settings updated, refreshing templates...');
+        setTimeout(() => {
+            initializeTemplates();
+        }, 500);
+    });
+    
     // Try to initialize right away if needed
     if (typeof window.globalSettings !== 'undefined') {
         initializeTemplates();
     } else {
-        // Use demo data initially
-        populateSelectWithDemoTemplates(templateSelect);
+        // Show placeholder initially
+        templateSelect.innerHTML = '<option value="">Connect to vSphere...</option>';
+        templateSelect.disabled = true;
     }
 });

@@ -27,9 +27,28 @@
         <main>
             <div class="form-container">
                 <form id="vm-form">
-                    <!-- vSphere connection settings moved to global settings -->
-                    <div class="form-section">
-                        <h2>Infrastructure Location</h2>
+                    <!-- vSphere connection settings moved to global settings -->                    <div class="form-section">
+                        <h2>Infrastructure Location
+                            <div class="connection-status-container">
+                                <button id="test-vsphere-connection" class="btn btn-small status-btn">
+                                    <i class="fas fa-plug"></i> Test vSphere Connection
+                                </button>
+                                <div class="status-indicators">
+                                    <div class="status-indicator" id="vsphere-status">
+                                        <i class="fas fa-circle status-unknown"></i>
+                                        <span>vSphere</span>
+                                    </div>
+                                    <div class="status-indicator" id="templates-status">
+                                        <i class="fas fa-circle status-unknown"></i>
+                                        <span>Templates</span>
+                                    </div>
+                                    <div class="status-indicator" id="infrastructure-status">
+                                        <i class="fas fa-circle status-unknown"></i>
+                                        <span>Infrastructure</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </h2>
                         <div class="form-group">
                             <label for="datacenter">Datacenter</label>
                             <select id="datacenter" name="datacenter" required>
@@ -313,6 +332,7 @@
             </div>
         </div>
     </div>    <link rel="stylesheet" href="vm-customization.js.css">
+    <script src="connection-status.js"></script>
     <script src="satellite-api.js"></script>
     <script src="host-groups.js"></script>
     <script src="post-deployment.js"></script>

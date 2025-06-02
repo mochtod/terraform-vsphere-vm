@@ -196,12 +196,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            if (data.success) {
-                // Update global settings
+            if (data.success) {                // Update global settings
                 window.globalSettings = data.settings;
                 
                 // Notify components that settings are updated
                 document.dispatchEvent(new Event('settingsLoaded'));
+                document.dispatchEvent(new Event('settingsUpdated'));
                   // Show success message
                 showNotification('Settings saved successfully', 'success');
                 

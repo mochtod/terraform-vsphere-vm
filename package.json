@@ -17,6 +17,7 @@
     "express": "^5.1.0",
     "node-fetch": "^3.3.2",
     "node-vsphere-soap": "^0.0.2-5",
+    "puppeteer": "^24.10.0",
     "uuid": "^11.1.0"
   }
 }

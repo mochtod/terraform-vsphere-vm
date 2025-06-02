@@ -379,9 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 1. Initial setup on DOMContentLoaded: Reset selects to disabled/placeholder state
     console.log("Initial setup: Resetting dropdowns.");
-    resetSelects(true); // Show "Connect to vSphere..." initially
-
-    // 2. Add listener for settings loaded with debouncing
+    resetSelects(true); // Show "Connect to vSphere..." initially    // 2. Add listener for settings loaded with debouncing
     let globalSettingsTimeout;
     document.addEventListener('settingsLoaded', function() {
         console.log('Global settings loaded event received.');
@@ -396,6 +394,22 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Attempting dropdown update after settings loaded...');
             updateInfrastructureDropdowns(); // Attempt to load real data
         }, 300);
+    });
+    
+    // Listen for settings updates (when user changes credentials)
+    document.addEventListener('settingsUpdated', function() {
+        console.log('Global settings updated event received.');
+        
+        // Clear existing timeout
+        if (globalSettingsTimeout) {
+            clearTimeout(globalSettingsTimeout);
+        }
+        
+        // Debounce global settings updates
+        globalSettingsTimeout = setTimeout(() => {
+            console.log('Attempting dropdown refresh after settings update...');
+            updateInfrastructureDropdowns(); // Refresh with new credentials
+        }, 500);
     });
     
     // Also try to initialize if global settings are already available
