@@ -53,10 +53,12 @@ terraform apply -var="vm_host_group=Server_Storage_Tech/Development"
 
 The registration executes this command on the newly deployed VM:
 ```bash
-eval $(curl -sS -X POST https://10.69.184.144/api/v2/chr/register \
+eval $(curl -sS --insecure -X POST https://10.69.184.144/api/v2/chr/register \
   -H "Content-Type: application/json" \
   -d '{"hostgroup_name": "Server_Storage_Tech/Development", "auto_run": false}' | jq -r '.registration_command')
 ```
+
+Note: The `--insecure` flag is used to bypass SSL certificate verification for self-signed certificates.
 
 ## Benefits
 
@@ -90,6 +92,11 @@ vm_host_group = ""
 - Verify CHR API server URL is correct
 - Check if the host group name exists in CHR
 - Ensure the API endpoint is accessible from the VM
+
+### SSL Certificate Issues
+- The configuration uses `--insecure` flag to bypass self-signed certificate verification
+- If you need proper SSL verification, add your CA certificate to the VM template
+- For production environments, consider using proper SSL certificates
 
 ## Example Complete Configuration
 

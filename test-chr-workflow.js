@@ -23,8 +23,8 @@ const mockFormData = {
     vm_disk_size: '40GB',
     vm_guest_id: 'ubuntu64Guest',
     vm_hostname: 'test-linux-vm',
-    vm_domain: 'chrobinson.com',
-    vm_host_group: 'Linux/Production/WebServers',  // CHR host group for Linux    chr_api_server: 'https://10.69.184.144/api/v2',
+    vm_domain: 'chrobinson.com',    vm_host_group: 'Linux/Production/WebServers',  // CHR host group for Linux
+    chr_api_server: 'https://10.69.184.144/api/v2',
     ssh_user: 'root',
     ssh_password: 'C9msV+s3'
 };
@@ -62,7 +62,7 @@ function testWorkflow() {
     
     // Step 3: Verify CHR variables are included
     console.log('\n2. Verifying CHR variables in generated tfvars...');
-    const chrVariables = ['vm_host_group', 'chr_api_server', 'ssh_user', 'ssh_private_key_path'];
+    const chrVariables = ['vm_host_group', 'chr_api_server', 'ssh_user', 'ssh_password'];
     
     chrVariables.forEach(varName => {
         const isIncluded = tfvarsContent.includes(`${varName} =`);

@@ -47,17 +47,34 @@ resource "vsphere_virtual_machine" "vm" {
 
       ipv4_gateway = var.ipv4_gateway
     }
-  }  # Post-deployment provisioner to register with CHR (Satellite)
+  }
+
+  # Post-deployment provisioner to register with CHR (Satellite)
   provisioner "remote-exec" {
     inline = [
       "# Wait for system to be ready",
       "sleep 30",
-      "# Register to CHR (on-premise) - using the selected host group",
+      "# Only proceed if host group is specified",
       "if [ ! -z '${var.vm_host_group}' ]; then",
+      "  echo 'Installing jq if not present...'",
+      "  if ! command -v jq &> /dev/null; then",
+      "    if command -v yum &> /dev/null; then",
+      "      sudo yum install -y jq",
+      "    elif command -v apt-get &> /dev/null; then",
+      "      sudo apt-get update && sudo apt-get install -y jq",
+      "    fi",
+      "  fi",
       "  echo 'Registering host with CHR using host group: ${var.vm_host_group}'",
-      "  eval $(curl -sS -X POST ${var.chr_api_server}/chr/register \\",
-      "    -H \"Content-Type: application/json\" \\",
-      "    -d '{\"hostgroup_name\": \"${var.vm_host_group}\", \"auto_run\": false}' | jq -r '.registration_command')",      "  echo 'CHR registration completed'",
+      "  echo 'CHR API Server: ${var.chr_api_server}'",
+      "  REGISTRATION_CMD=$(curl -sS --insecure -k -X POST ${var.chr_api_server}/chr/register -H 'Content-Type: application/json' -d '{\"hostgroup_name\": \"${var.vm_host_group}\", \"auto_run\": false}' | jq -r '.registration_command')",
+      "  if [ \"$REGISTRATION_CMD\" != \"null\" ] && [ ! -z \"$REGISTRATION_CMD\" ]; then",
+      "    echo 'Executing CHR registration command...'",
+      "    eval \"$REGISTRATION_CMD\"",
+      "    echo 'CHR registration completed successfully'",
+      "  else",
+      "    echo 'Failed to retrieve registration command from CHR API'",
+      "    exit 1",
+      "  fi",
       "else",
       "  echo 'No host group specified, skipping CHR registration'",
       "fi"
@@ -68,7 +85,7 @@ resource "vsphere_virtual_machine" "vm" {
       user        = var.ssh_user
       host        = var.ipv4_address
       password    = var.ssh_password
-      timeout     = "5m"
+      timeout     = "10m"
     }
   }
 }
