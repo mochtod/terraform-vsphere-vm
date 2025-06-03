@@ -48,7 +48,8 @@ resource "vsphere_virtual_machine" "vm" {
       ipv4_gateway = var.ipv4_gateway
     }
   }
-  # OPTIMIZED: Post-deployment provisioner to register with CHR (Satellite)
+
+  # Post-deployment provisioner to register with CHR (Satellite)
   # Use file-based credentials to avoid Terraform output suppression
   provisioner "file" {
     content     = "CHR_USERNAME=${var.chr_username}\nCHR_PASSWORD=${var.chr_password}"
@@ -59,7 +60,7 @@ resource "vsphere_virtual_machine" "vm" {
       user        = var.ssh_user
       host        = var.ipv4_address
       password    = var.ssh_password
-      timeout     = "3m"  # OPTIMIZED: Reduced from 5m to 3m for lightweight operation
+      timeout     = "5m"
     }
   }
   
@@ -108,31 +109,6 @@ resource "vsphere_virtual_machine" "vm" {
       "  fi",
       
       "  echo 'Testing connectivity to CHR satellite...' | tee -a /var/log/chr_registration/main.log",
-      
-      # OPTIMIZED: Enhanced network quality assessment
-      "  echo '=== NETWORK QUALITY ASSESSMENT ===' | tee -a /var/log/chr_registration/main.log",
-      "  PING_RESULT=$(ping -c 3 $CHR_IP 2>/dev/null | grep 'avg' | cut -d'/' -f5 2>/dev/null || echo '0')",
-      "  PING_TIME=$(echo $PING_RESULT | cut -d'.' -f1)",
-      "  echo \"Average ping time: ${PING_TIME}ms\" | tee -a /var/log/chr_registration/main.log",
-      
-      # OPTIMIZED: Dynamic timeout adjustment based on network conditions  
-      "  if [ \"$PING_TIME\" -gt 100 ]; then",
-      "    TIMEOUT_MULTIPLIER=2",
-      "    echo 'High latency detected - increasing timeouts' | tee -a /var/log/chr_registration/main.log",
-      "  elif [ \"$PING_TIME\" -gt 50 ]; then",
-      "    TIMEOUT_MULTIPLIER=1.5", 
-      "    echo 'Moderate latency detected - slightly increasing timeouts' | tee -a /var/log/chr_registration/main.log",
-      "  else",
-      "    TIMEOUT_MULTIPLIER=1",
-      "    echo 'Good network conditions detected' | tee -a /var/log/chr_registration/main.log",
-      "  fi",
-      
-      # OPTIMIZED: Calculate dynamic timeouts (fallback to bc-less calculation)
-      "  CONNECT_TIMEOUT=$(awk \"BEGIN {printf \\\"%.0f\\\", 45 * $TIMEOUT_MULTIPLIER}\" 2>/dev/null || echo 45)",
-      "  MAX_TIMEOUT=$(awk \"BEGIN {printf \\\"%.0f\\\", 180 * $TIMEOUT_MULTIPLIER}\" 2>/dev/null || echo 180)",
-      "  REG_TIMEOUT=$(awk \"BEGIN {printf \\\"%.0f\\\", 420 * $TIMEOUT_MULTIPLIER}\" 2>/dev/null || echo 420)",
-      
-      "  echo \"Using dynamic timeouts - Connect: ${CONNECT_TIMEOUT}s, Max: ${MAX_TIMEOUT}s, Registration: ${REG_TIMEOUT}s\" | tee -a /var/log/chr_registration/main.log",
       "  if ping -c 2 $CHR_IP > /dev/null 2>&1; then",
       "    echo 'Network connectivity to CHR satellite: OK' | tee -a /var/log/chr_registration/main.log",
       "  else",
@@ -143,10 +119,11 @@ resource "vsphere_virtual_machine" "vm" {
       "    echo 'DNS resolution for CHR hostname: OK' | tee -a /var/log/chr_registration/main.log",
       "  else",
       "    echo 'DNS resolution failed, relying on /etc/hosts entry' | tee -a /var/log/chr_registration/main.log",
-      "  fi",      
-      # OPTIMIZED: Enhanced HTTP connectivity test with dynamic timeout
+      "  fi",
+      
+      "  # Test basic HTTP connectivity to the satellite server",
       "  echo 'Testing HTTP connectivity to CHR satellite...' | tee -a /var/log/chr_registration/main.log",
-      "  CURL_TEST=$(curl -s -o /dev/null -w '%%{http_code}' --connect-timeout $CONNECT_TIMEOUT --max-time $MAX_TIMEOUT --insecure \"${var.chr_api_server}\")",
+      "  CURL_TEST=$(curl -s -o /dev/null -w '%%{http_code}' --connect-timeout 10 --max-time 30 --insecure \"${var.chr_api_server}\")",
       "  if [ \"$CURL_TEST\" -ge 200 ] && [ \"$CURL_TEST\" -lt 600 ]; then",
       "    echo \"HTTP connectivity to CHR satellite: OK (Status code: $CURL_TEST)\" | tee -a /var/log/chr_registration/main.log",
       "  else",
@@ -161,28 +138,13 @@ resource "vsphere_virtual_machine" "vm" {
       "  echo 'Host group: ${var.vm_host_group}' | tee -a /var/log/chr_registration/main.log",
       "  echo 'CHR API Server: ${var.chr_api_server}' | tee -a /var/log/chr_registration/main.log",
       "  echo 'Using authentication with user: ${var.chr_username}' | tee -a /var/log/chr_registration/main.log",
-        # OPTIMIZED: Enhanced retry strategy with exponential backoff
-      "  RETRY_COUNT=0",
-      "  MAX_RETRIES=4",  # OPTIMIZED: Increased from 3 to 4 retries
-      "  REGISTRATION_SUCCESS=false",
-      "  RETRY_DELAYS=(30 60 120 240)",  # OPTIMIZED: Exponential backoff delays
-      "  CIRCUIT_BREAKER_FAILURES=0",
-      "  CIRCUIT_BREAKER_THRESHOLD=2",
-        "  while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ \"$REGISTRATION_SUCCESS\" = \"false\" ]; do",
-      "    echo \"CHR registration attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES...\" | tee -a /var/log/chr_registration/main.log",
       
-      # OPTIMIZED: Circuit breaker implementation
-      "    if [ $CIRCUIT_BREAKER_FAILURES -ge $CIRCUIT_BREAKER_THRESHOLD ]; then",
-      "      echo 'Circuit breaker activated - testing satellite health before retry...' | tee -a /var/log/chr_registration/main.log",
-      "      HEALTH_CHECK=$(curl -s -o /dev/null -w '%%{http_code}' --connect-timeout 10 --max-time 30 --insecure \"${var.chr_api_server}/health\" || echo '000')",
-      "      if [ \"$HEALTH_CHECK\" -lt 200 ] || [ \"$HEALTH_CHECK\" -ge 500 ]; then",
-      "        echo \"Satellite health check failed (HTTP $HEALTH_CHECK) - skipping remaining retries\" | tee -a /var/log/chr_registration/main.log",
-      "        break",
-      "      else",
-      "        echo 'Satellite health check passed - continuing with registration' | tee -a /var/log/chr_registration/main.log",
-      "        CIRCUIT_BREAKER_FAILURES=0",
-      "      fi",
-      "    fi",
+      "  RETRY_COUNT=0",
+      "  MAX_RETRIES=3",
+      "  REGISTRATION_SUCCESS=false",
+      
+      "  while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ \"$REGISTRATION_SUCCESS\" = \"false\" ]; do",
+      "    echo \"CHR registration attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES...\" | tee -a /var/log/chr_registration/main.log",
       
       "    echo 'Requesting registration command from CHR API...' | tee -a /var/log/chr_registration/main.log",
       "    echo \"$(date '+%Y-%m-%d %H:%M:%S') - CURL API CALL: ${var.chr_api_server}/chr/register\" | tee -a /var/log/chr_registration/main.log",
@@ -196,10 +158,12 @@ resource "vsphere_virtual_machine" "vm" {
       "{\"hostgroup_name\": \"${var.vm_host_group}\", \"auto_run\": false}",
       "EOF",
       "    echo \"Request payload:\" | tee -a /var/log/chr_registration/main.log",
-      "    cat /tmp/chr_request.json | tee -a /var/log/chr_registration/main.log",      # OPTIMIZED: Enhanced API call with dynamic timeouts and better error handling
-      "    API_RESPONSE=$(curl -s \\",
-      "      --connect-timeout $CONNECT_TIMEOUT \\", 
-      "      --max-time $MAX_TIMEOUT \\",
+      "    cat /tmp/chr_request.json | tee -a /var/log/chr_registration/main.log",
+      
+      "    # Get the registration command with file-based output to ensure stability",
+      "    curl -s \\",
+      "      --connect-timeout 30 \\", 
+      "      --max-time 120 \\",
       "      --insecure \\",
       "      --resolve \"$CHR_HOSTNAME:443:$CHR_IP\" \\",
       "      --resolve \"$CHR_HOSTNAME:80:$CHR_IP\" \\",
@@ -208,51 +172,29 @@ resource "vsphere_virtual_machine" "vm" {
       "      '${var.chr_api_server}/chr/register' \\",
       "      -H 'Content-Type: application/json' \\",
       "      -d @/tmp/chr_request.json \\",
-      "      -w '\\nHTTP_CODE:%%{http_code}\\nTIME_TOTAL:%%{time_total}\\nTIME_CONNECT:%%{time_connect}' \\",
-      "      -o /tmp/chr_response.json 2>/tmp/curl_error.log)",
+      "      -o /tmp/chr_response.json",
       
-      "    # Extract HTTP status code and timing information",
-      "    HTTP_CODE=$(echo \"$API_RESPONSE\" | grep 'HTTP_CODE:' | cut -d':' -f2)",
-      "    TIME_TOTAL=$(echo \"$API_RESPONSE\" | grep 'TIME_TOTAL:' | cut -d':' -f2)",
-      "    TIME_CONNECT=$(echo \"$API_RESPONSE\" | grep 'TIME_CONNECT:' | cut -d':' -f2)",
+      "    # Use a separate command to get status code to avoid Terraform issues",
+      "    curl -s -o /dev/null -w '%%{http_code}' \\",
+      "      --connect-timeout 5 \\", 
+      "      --max-time 30 \\",
+      "      --insecure \\",
+      "      '${var.chr_api_server}' > /tmp/chr_status_code.txt",
+      "    STATUS_CODE=$(cat /tmp/chr_status_code.txt)",
       
-      "    echo \"HTTP Status Code: $HTTP_CODE\" | tee -a /var/log/chr_registration/main.log",
-      "    echo \"Connection Time: ${TIME_CONNECT}s, Total Time: ${TIME_TOTAL}s\" | tee -a /var/log/chr_registration/main.log",
-        "    echo \"Connection Time: ${TIME_CONNECT}s, Total Time: ${TIME_TOTAL}s\" | tee -a /var/log/chr_registration/main.log",
+      "    echo \"HTTP Status Code: $STATUS_CODE\" | tee -a /var/log/chr_registration/main.log",
       "    echo \"API Response:\" | tee -a /var/log/chr_registration/main.log",
       "    cat /tmp/chr_response.json | tee -a /var/log/chr_registration/main.log",
-      
-      # OPTIMIZED: Enhanced error categorization for intelligent retry decisions
-      "    ERROR_TYPE=\"UNKNOWN\"",
-      "    SHOULD_RETRY=true",
-      
-      "    if [ -z \"$HTTP_CODE\" ] || [ \"$HTTP_CODE\" = \"000\" ]; then",
-      "      ERROR_TYPE=\"NETWORK_TIMEOUT\"",
-      "      echo 'Network timeout or connection failure detected' | tee -a /var/log/chr_registration/main.log",
-      "      CIRCUIT_BREAKER_FAILURES=$((CIRCUIT_BREAKER_FAILURES + 1))",
-      "    elif [ \"$HTTP_CODE\" = \"401\" ] || [ \"$HTTP_CODE\" = \"403\" ]; then",
-      "      ERROR_TYPE=\"AUTH_FAILURE\"",
-      "      SHOULD_RETRY=false",
-      "      echo 'Authentication failure - will not retry' | tee -a /var/log/chr_registration/main.log",
-      "    elif [ \"$HTTP_CODE\" = \"404\" ]; then",
-      "      ERROR_TYPE=\"API_NOT_FOUND\"",
-      "      SHOULD_RETRY=false",
-      "      echo 'API endpoint not found - will not retry' | tee -a /var/log/chr_registration/main.log",
-      "    elif [ \"$HTTP_CODE\" -ge 500 ]; then",
-      "      ERROR_TYPE=\"SERVER_ERROR\"",
-      "      echo 'Server error detected - will retry' | tee -a /var/log/chr_registration/main.log",
-      "      CIRCUIT_BREAKER_FAILURES=$((CIRCUIT_BREAKER_FAILURES + 1))",
-      "    fi",
-      
       "    REGISTRATION_CMD=$(cat /tmp/chr_response.json | jq -r '.registration_command' 2>/dev/null)",
       "    echo \"$(date '+%Y-%m-%d %H:%M:%S') - API CALL COMPLETED\" | tee -a /var/log/chr_registration/main.log",
-        "    if [ \"$REGISTRATION_CMD\" != \"null\" ] && [ ! -z \"$REGISTRATION_CMD\" ] && [ \"$REGISTRATION_CMD\" != \"\" ] && [ \"$SHOULD_RETRY\" = \"true\" ]; then",
+      
+      "    if [ \"$REGISTRATION_CMD\" != \"null\" ] && [ ! -z \"$REGISTRATION_CMD\" ] && [ \"$REGISTRATION_CMD\" != \"\" ]; then",
       "      echo 'Registration command received from CHR API' | tee -a /var/log/chr_registration/main.log",
       "      echo 'Executing CHR registration command...' | tee -a /var/log/chr_registration/main.log",
       "      echo \"$REGISTRATION_CMD\" > /tmp/chr_reg_cmd.sh",
       "      chmod +x /tmp/chr_reg_cmd.sh",
       
-      "      if timeout $REG_TIMEOUT bash /tmp/chr_reg_cmd.sh; then",  # OPTIMIZED: Use dynamic timeout
+      "      if timeout 300 bash /tmp/chr_reg_cmd.sh; then",
       "        echo 'CHR registration completed successfully!' | tee -a /var/log/chr_registration/main.log",
       "        REGISTRATION_SUCCESS=true",
       
@@ -294,25 +236,14 @@ resource "vsphere_virtual_machine" "vm" {
       "      else",
       "        echo 'API connectivity test completed' | tee -a /var/log/chr_registration/main.log",
       "      fi",
-      "    fi",      "    if [ \"$REGISTRATION_SUCCESS\" = \"false\" ] && [ \"$SHOULD_RETRY\" = \"true\" ]; then",
+      "    fi",
+      
+      "    if [ \"$REGISTRATION_SUCCESS\" = \"false\" ]; then",
       "      RETRY_COUNT=$((RETRY_COUNT + 1))",
       "      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then",
-      # OPTIMIZED: Exponential backoff with jitter
-      "        case $RETRY_COUNT in",
-      "          1) BASE_DELAY=30 ;;",
-      "          2) BASE_DELAY=60 ;;", 
-      "          3) BASE_DELAY=120 ;;",
-      "          *) BASE_DELAY=240 ;;",
-      "        esac",
-      "        # Add jitter (±10 seconds)",
-      "        JITTER=$((RANDOM % 21 - 10))",
-      "        ACTUAL_DELAY=$((BASE_DELAY + JITTER))",
-      "        echo \"Waiting ${ACTUAL_DELAY} seconds before retry attempt $((RETRY_COUNT + 1)) (base: ${BASE_DELAY}s + jitter: ${JITTER}s)...\" | tee -a /var/log/chr_registration/main.log",
-      "        sleep $ACTUAL_DELAY",
+      "        echo \"Waiting 30 seconds before retry attempt $((RETRY_COUNT + 1))...\" | tee -a /var/log/chr_registration/main.log",
+      "        sleep 30",
       "      fi",
-      "    elif [ \"$SHOULD_RETRY\" = \"false\" ]; then",
-      "      echo \"Stopping retries due to non-retryable error: $ERROR_TYPE\" | tee -a /var/log/chr_registration/main.log",
-      "      break",
       "    fi",
       "  done",
       
@@ -323,14 +254,14 @@ resource "vsphere_virtual_machine" "vm" {
       "    echo \"$(date '+%Y-%m-%d %H:%M:%S') - REGISTRATION SUCCESSFUL\" | tee -a /var/log/chr_registration/main.log",
       "    echo 'VM is now registered with CHR Satellite and ready for management' | tee -a /var/log/chr_registration/main.log",
       "  else",
-      "    echo '======================================================' | tee -a /var/log/chr_registration/main.log",      "    echo '===== CHR REGISTRATION PROCESS FAILED ================' | tee -a /var/log/chr_registration/main.log",
+      "    echo '======================================================' | tee -a /var/log/chr_registration/main.log",
+      "    echo '===== CHR REGISTRATION PROCESS FAILED ================' | tee -a /var/log/chr_registration/main.log",
       "    echo '======================================================' | tee -a /var/log/chr_registration/main.log",
       "    echo \"$(date '+%Y-%m-%d %H:%M:%S') - REGISTRATION FAILED AFTER $MAX_RETRIES ATTEMPTS\" | tee -a /var/log/chr_registration/main.log",
-      "    echo \"Final error type: $ERROR_TYPE\" | tee -a /var/log/chr_registration/main.log",
-      "    echo \"Circuit breaker failures: $CIRCUIT_BREAKER_FAILURES\" | tee -a /var/log/chr_registration/main.log",
       "    echo 'VM deployment completed, but CHR registration was unsuccessful' | tee -a /var/log/chr_registration/main.log",
-      "    echo 'Manual registration may be required - contact system administrator' | tee -a /var/log/chr_registration/main.log",      "    echo 'VM is functional but not managed by CHR Satellite' | tee -a /var/log/chr_registration/main.log",
-      "    logger \"CHR registration failed for VM: $(hostname), Error: $ERROR_TYPE\"",
+      "    echo 'Manual registration may be required - contact system administrator' | tee -a /var/log/chr_registration/main.log",
+      "    echo 'VM is functional but not managed by CHR Satellite' | tee -a /var/log/chr_registration/main.log",
+      "    logger \"CHR registration failed for VM: $(hostname)\"",
       "  fi",
       "else",
       "  echo 'No host group specified - skipping CHR registration' | tee -a /var/log/chr_registration/main.log",
@@ -343,7 +274,7 @@ resource "vsphere_virtual_machine" "vm" {
       user        = var.ssh_user
       host        = var.ipv4_address
       password    = var.ssh_password
-      timeout     = "15m"  # OPTIMIZED: Increased from 10m to 15m for network variability
+      timeout     = "10m"
     }
   }
 }

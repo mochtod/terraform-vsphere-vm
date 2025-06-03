@@ -1089,6 +1089,100 @@ app.get('/api/deployed-vms', (req, res) => {
     }
 });
 
+// --- CHR Registration API endpoint ---
+// This endpoint is called by the remote-exec provisioner in Terraform
+app.post('/chr/register', async (req, res) => {
+    try {
+        const { hostgroup_name, auto_run } = req.body;
+        
+        if (!hostgroup_name) {
+            return res.status(400).json({
+                success: false,
+                error: 'hostgroup_name is required'
+            });
+        }
+
+        console.log(`CHR Registration request for host group: ${hostgroup_name}`);
+        
+        // Get settings for CHR/Satellite configuration
+        const globalSettings = settings.getSettings();
+        
+        if (!globalSettings.satellite || !globalSettings.satellite.url) {
+            return res.status(400).json({
+                success: false,
+                error: 'CHR Satellite URL not configured. Please configure satellite settings.'
+            });
+        }
+
+        const satelliteUrl = globalSettings.satellite.url;
+        const username = globalSettings.satellite.username;
+        const password = globalSettings.satellite.password;
+        
+        if (!username || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'CHR Satellite credentials not configured. Please provide username and password in settings.'
+            });
+        }
+
+        // Generate a mock hostname for registration (in real scenario this would be the actual VM hostname)
+        const hostname = `vm-${Date.now()}`;
+          // Generate the registration command that matches the Satellite 6 API format
+        const registrationCommand = `curl -X POST "${satelliteUrl}/api/v2/hosts" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: application/json" \\
+  -u "${username}:${password}" \\
+  -k \\
+  -d '{
+    "host": {
+      "name": "${hostname}",
+      "hostgroup_name": "${hostgroup_name}",
+      "organization_id": 1,
+      "location_id": 2,
+      "build": false,
+      "enabled": true,
+      "managed": true,
+      "provision_method": "build",
+      "interfaces_attributes": {
+        "0": {
+          "mac": "00:50:56:${Math.floor(Math.random()*256).toString(16).padStart(2,'0')}:${Math.floor(Math.random()*256).toString(16).padStart(2,'0')}:${Math.floor(Math.random()*256).toString(16).padStart(2,'0')}",
+          "primary": true,
+          "provision": true
+        }
+      }
+    }
+  }'`;
+
+        console.log(`Generated CHR registration command for ${hostname} in ${hostgroup_name}`);
+
+        // Return the response in the format expected by the remote-exec provisioner
+        res.json({
+            success: true,
+            registration_command: registrationCommand,
+            hostgroup_name: hostgroup_name,
+            hostname: hostname,
+            auto_run: auto_run || false
+        });
+
+    } catch (error) {
+        console.error('Error generating CHR registration command:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// --- CHR Status endpoint for connectivity testing ---
+app.get('/status', (req, res) => {
+    res.json({
+        success: true,
+        status: 'CHR API Server is running',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+    });
+});
+
 // --- Ansible AAP API endpoint ---
 app.post('/api/aap/launch', async (req, res) => {
     try {

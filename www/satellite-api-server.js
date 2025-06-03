@@ -154,8 +154,7 @@ router.post('/registration-command', (req, res) => {
                 error: 'CHR Satellite credentials not configured'
             });
         }
-        
-        // Generate the curl command for CHR Satellite registration using Satellite 6 API
+          // Generate the curl command for CHR Satellite registration using Satellite 6 API
         const registrationCommand = `curl -X POST "${satelliteUrl}/api/v2/hosts" \\
   -H "Content-Type: application/json" \\
   -H "Accept: application/json" \\
@@ -164,11 +163,20 @@ router.post('/registration-command', (req, res) => {
   -d '{
     "host": {
       "name": "${hostname}",
-      "hostgroup_id": ${hostGroup.id || hostGroup},
+      "hostgroup_name": "${hostGroup.name || hostGroup}",
+      "organization_id": 1,
+      "location_id": 2,
       "build": false,
       "enabled": true,
       "managed": true,
-      "provision_method": "build"
+      "provision_method": "build",
+      "interfaces_attributes": {
+        "0": {
+          "mac": "00:50:56:${Math.floor(Math.random()*256).toString(16).padStart(2,'0')}:${Math.floor(Math.random()*256).toString(16).padStart(2,'0')}:${Math.floor(Math.random()*256).toString(16).padStart(2,'0')}",
+          "primary": true,
+          "provision": true
+        }
+      }
     }
   }'`;
 
