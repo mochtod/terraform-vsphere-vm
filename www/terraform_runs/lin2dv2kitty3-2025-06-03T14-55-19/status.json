@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-06-03T14:57:03.239Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty3-2025-06-03T14-55-19/lin2dv2kitty3.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-03T14:58:30.714Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mremote-exec provisioner error\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 51, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  51:   provisioner \"remote-exec\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0minvalid empty string in 'scripts'\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-06-03T14:58:30.714Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mremote-exec provisioner error\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 51, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  51:   provisioner \"remote-exec\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0minvalid empty string in 'scripts'\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-06-03T13:21:28.464Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty1-2025-06-03T13-20-02/lin2dv2kitty1.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-03T13:23:40.309Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mremote-exec provisioner error\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 53, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  53:   provisioner \"remote-exec\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0merror executing \"/tmp/terraform_1203287444.sh\": Process exited with status\n\u001b[31m│\u001b[0m \u001b[0m1\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-06-03T13:23:40.309Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mremote-exec provisioner error\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 53, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  53:   provisioner \"remote-exec\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0merror executing \"/tmp/terraform_1203287444.sh\": Process exited with status\n\u001b[31m│\u001b[0m \u001b[0m1\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

@@ -669,10 +669,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Also log to console for debugging
         console.log(`Notification (${type}):`, message);
-    }
-
-    // Generate tfvars file from form input
-    function generateTfvars() {
+    }    // Generate tfvars file from form input
+    function generateTfvars(skipSave = false) {
         const form = document.getElementById('vm-form');
         const formData = new FormData(form);
         
@@ -688,7 +686,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add CHR API server from global settings if available
         if (window.globalSettings && window.globalSettings.satellite && window.globalSettings.satellite.url) {
-            tfvarsContent += `chr_api_server = "${window.globalSettings.satellite.url}"\n`;
+            tfvarsContent += `chr_api_server = "${window.globalSettings.satellite.url}/api/v2"\n`;
+        }
+        
+        // Add CHR satellite authentication credentials
+        if (window.globalSettings && window.globalSettings.satellite) {
+            if (window.globalSettings.satellite.username) {
+                tfvarsContent += `satellite_username = "${window.globalSettings.satellite.username}"\n`;
+            }
+            if (window.globalSettings.satellite.password) {
+                tfvarsContent += `satellite_password = "${window.globalSettings.satellite.password}"\n`;
+            }
         }
         
         // Add password comment
@@ -697,14 +705,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Display in the output area
         document.getElementById('tfvars-code').textContent = tfvarsContent;
         
-        // If we have a current workspace, save the form data
-        if (window.currentWorkspace) {
+        // Only save if not explicitly skipped (to prevent circular calls)
+        if (window.currentWorkspace && !skipSave) {
             saveWorkspaceConfig();
         }
           return tfvarsContent;
     }
-    
-    // Function to save current form data to the workspace
+      // Function to save current form data to the workspace
     function saveWorkspaceConfig() {
         if (!window.currentWorkspace) return;
         
@@ -719,8 +726,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Generate and save current tfvars
-        const currentTfvars = generateTfvars();
+        // Generate and save current tfvars (skip automatic save to prevent circular reference)
+        const currentTfvars = generateTfvars(true);
         
         // Save to the server with both config and tfvars
         fetch(`/api/workspaces/${window.currentWorkspace.id}/config`, {
@@ -1049,13 +1056,129 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('apply-output').classList.remove('active');
                 }, 2000);
             } else {
-                applyOutput.textContent = "Error applying terraform:\n\n" + data.error;
+                // Check if it's a stale plan error
+                if (data.error && data.error.includes('Saved plan is stale')) {
+                    applyOutput.textContent = "Error: The terraform plan is stale because the infrastructure state has changed.\n\n";
+                    applyOutput.textContent += "This can happen when:\n";
+                    applyOutput.textContent += "- Another operation modified the infrastructure\n";
+                    applyOutput.textContent += "- The plan is too old (older than 30 minutes)\n";
+                    applyOutput.textContent += "- The VM already exists or was modified outside Terraform\n\n";
+                    applyOutput.textContent += "Click 'Refresh Plan' below to update the plan and try again.\n\n";
+                    applyOutput.textContent += "Original error:\n" + data.error;
+                    
+                    // Add refresh plan button
+                    const refreshButton = document.createElement('button');
+                    refreshButton.textContent = 'Refresh Plan';
+                    refreshButton.className = 'btn btn-warning';
+                    refreshButton.style.marginTop = '10px';
+                    refreshButton.onclick = () => refreshStalePlan();
+                    
+                    // Clear any existing refresh buttons
+                    const existingButton = document.querySelector('.refresh-plan-btn');
+                    if (existingButton) {
+                        existingButton.remove();
+                    }
+                    
+                    refreshButton.className += ' refresh-plan-btn';
+                    document.getElementById('apply-output').appendChild(refreshButton);
+                } else {
+                    applyOutput.textContent = "Error applying terraform:\n\n" + data.error;
+                }
             }
         })
         .catch(error => {
             applyOutput.textContent = "Error connecting to backend:\n\n" + error.message;
         });
     });
+
+    // Function to refresh a stale plan
+    function refreshStalePlan() {
+        if (!window.currentWorkspace) {
+            alert('No workspace selected');
+            return;
+        }
+
+        const planOutput = document.getElementById('plan-code');
+        const applyOutput = document.getElementById('apply-code');
+        
+        // Show loading state
+        planOutput.textContent = "Refreshing terraform plan...\nRefreshing state and regenerating plan...\n";
+        applyOutput.textContent = "Plan refresh in progress...\nPlease wait while the plan is updated.\n";
+        
+        // Remove any existing refresh buttons
+        const existingButton = document.querySelector('.refresh-plan-btn');
+        if (existingButton) {
+            existingButton.remove();
+        }
+        
+        // Get vSphere password from global settings
+        let vspherePassword = '';
+        if (window.globalSettings && window.globalSettings.vsphere) {
+            vspherePassword = window.globalSettings.vsphere.password || '';
+        }
+        
+        if (!vspherePassword) {
+            applyOutput.textContent = "Error: vSphere password is not set in global settings. Please update settings.";
+            return;
+        }
+        
+        // Call the refresh plan API
+        fetch('/api/terraform/refresh-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                workspaceId: window.currentWorkspace.id,
+                vspherePassword: vspherePassword
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Update the plan output
+                planOutput.textContent = data.planOutput;
+                planOutput.textContent += "\n\nPlan refreshed successfully!\nThe plan is now current and ready to apply.";
+                
+                // Update workspace data
+                window.currentWorkspace.planOutput = data.planOutput;
+                window.currentWorkspace.lastPlanned = data.lastPlanned;
+                window.currentWorkspace.status = 'planned';
+                window.currentWorkspace.error = null;
+                
+                // Clear apply output and show success message
+                applyOutput.textContent = "Plan has been refreshed successfully!\n\n";
+                applyOutput.textContent += "The infrastructure state has been updated and a new plan has been generated.\n";
+                applyOutput.textContent += "You can now click 'Apply Changes' to provision the VM with the current plan.\n";
+                applyOutput.textContent += `\nPlan refreshed at: ${new Date(data.lastPlanned).toLocaleString()}`;
+                
+                // Show success notification
+                showNotification('Plan refreshed successfully! Ready to apply.', 'success');
+                
+                // Switch back to plan tab to show the updated plan
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabPanels.forEach(p => p.classList.remove('active'));
+                document.querySelector('[data-tab="plan"]').classList.add('active');
+                document.getElementById('plan-output').classList.add('active');
+                
+            } else {
+                planOutput.textContent = "Error refreshing plan:\n\n" + data.error;
+                applyOutput.textContent = "Error refreshing plan:\n\n" + data.error;
+                showNotification('Failed to refresh plan: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            const errorMsg = "Error connecting to backend while refreshing plan:\n\n" + error.message;
+            planOutput.textContent = errorMsg;
+            applyOutput.textContent = errorMsg;
+            showNotification('Failed to refresh plan: ' + error.message, 'error');
+        });
+    }
 
     // Function to update workspace apply data
     function updateWorkspaceApplyData(workspaceId, applyData) {
@@ -1078,11 +1201,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error saving apply data:', error);
         });
-    }
-
-    // Handle the Download button click
+    }    // Handle the Download button click
     document.getElementById('download-tfvars').addEventListener('click', function() {
-        const tfvarsContent = generateTfvars();
+        const tfvarsContent = generateTfvars(true); // Skip automatic save during download
         const vmName = document.getElementById('vm_name').value;
         const fileName = `${vmName}.tfvars`;
         

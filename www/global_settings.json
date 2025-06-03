@@ -13,10 +13,10 @@
     "api_url": "https://ansibleaap.chrobinson.com",
     "api_token": "tIe1xZ3x50QFkqdgxNtcqTjAH4cU9A"
   },
-  "lastUpdated": "2025-06-03T12:49:31.072Z",
+  "lastUpdated": "2025-06-03T15:15:24.923Z",
   "satellite": {
     "chr_api_server": "satellite.chrobinson.com",
-    "url": "https://satellite.chrobinson.com/api/v2",
+    "url": "https://satellite.chrobinson.com",
     "username": "chradmin",
     "password": "C9msV+s3"
   }

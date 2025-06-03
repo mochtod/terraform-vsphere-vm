@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "startTime": "2025-06-03T17:31:10.124Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2coco03-2025-06-03T17-30-45/lin2dv2coco03.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-03T17:32:23.586Z",
+      "message": "Terraform apply completed successfully"
+    }
+  ],
+  "endTime": "2025-06-03T17:32:23.586Z",
+  "output": "\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Modifying... [id=42365d15-64a1-4b5f-2e3e-00bc5627af34]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=42365d15-64a1-4b5f-2e3e-00bc5627af34, 10s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=42365d15-64a1-4b5f-2e3e-00bc5627af34, 20s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=42365d15-64a1-4b5f-2e3e-00bc5627af34, 30s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=42365d15-64a1-4b5f-2e3e-00bc5627af34, 40s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=42365d15-64a1-4b5f-2e3e-00bc5627af34, 50s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=42365d15-64a1-4b5f-2e3e-00bc5627af34, 1m0s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Modifications complete after 1m7s [id=42365d15-64a1-4b5f-2e3e-00bc5627af34]\u001b[0m\n\u001b[0m\u001b[1m\u001b[32m\nApply complete! Resources: 0 added, 1 changed, 0 destroyed.\n\u001b[0m\u001b[0m\u001b[1m\u001b[32m\nOutputs:\n\n\u001b[0mvm_id = \"42365d15-64a1-4b5f-2e3e-00bc5627af34\"\nvm_ip = \"10.74.184.82\"\nvm_name = \"lin2dv2coco03\"\n"
+}

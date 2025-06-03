@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-06-03T13:18:10.301Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty1-2025-06-03T13-17-34/lin2dv2kitty1.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-03T13:18:31.008Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1merror powering on virtual machine: powerOn task for vm \"/EBDC NONPROD/vm/lin2dv2kitty1\" failed: ACPI motherboard layout requires EFI.\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 1, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m   1: resource \"vsphere_virtual_machine\" \"vm\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-06-03T13:18:31.008Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1merror powering on virtual machine: powerOn task for vm \"/EBDC NONPROD/vm/lin2dv2kitty1\" failed: ACPI motherboard layout requires EFI.\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 1, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m   1: resource \"vsphere_virtual_machine\" \"vm\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

@@ -26,11 +26,23 @@ function testGlobalSettingsIntegration() {
             return false;
         }
         
+        if (!globalSettings.satellite.username) {
+            console.log('❌ FAIL: No satellite username found in global_settings.json');
+            return false;
+        }
+        
+        if (!globalSettings.satellite.password) {
+            console.log('❌ FAIL: No satellite password found in global_settings.json');
+            return false;
+        }
+        
         console.log('✅ PASS: Satellite configuration found');
         console.log(`  URL: ${globalSettings.satellite.url}`);
-        console.log(`  Expected: https://satellite.chrobinson.com/api/v2`);
+        console.log(`  Username: ${globalSettings.satellite.username}`);
+        console.log(`  Password: ${'*'.repeat(globalSettings.satellite.password.length)}`);
+        console.log(`  Expected URL: https://satellite.chrobinson.com`);
         
-        if (globalSettings.satellite.url === 'https://satellite.chrobinson.com/api/v2') {
+        if (globalSettings.satellite.url === 'https://satellite.chrobinson.com') {
             console.log('✅ PASS: Satellite URL matches expected value');
         } else {
             console.log('⚠️ WARNING: Satellite URL differs from expected value');
@@ -52,10 +64,24 @@ function testTerraformVariables() {
         const rootVariablesPath = path.join(__dirname, 'variables.tf');
         const rootVariablesContent = fs.readFileSync(rootVariablesPath, 'utf8');
         
-        if (rootVariablesContent.includes('https://satellite.chrobinson.com/api/v2')) {
+        if (rootVariablesContent.includes('https://satellite.chrobinson.com')) {
             console.log('✅ PASS: Root variables.tf contains correct satellite URL');
         } else {
             console.log('❌ FAIL: Root variables.tf does not contain correct satellite URL');
+            return false;
+        }
+        
+        if (rootVariablesContent.includes('satellite_username')) {
+            console.log('✅ PASS: Root variables.tf contains satellite_username variable');
+        } else {
+            console.log('❌ FAIL: Root variables.tf does not contain satellite_username variable');
+            return false;
+        }
+        
+        if (rootVariablesContent.includes('satellite_password')) {
+            console.log('✅ PASS: Root variables.tf contains satellite_password variable');
+        } else {
+            console.log('❌ FAIL: Root variables.tf does not contain satellite_password variable');
             return false;
         }
         
@@ -63,10 +89,24 @@ function testTerraformVariables() {
         const moduleVariablesPath = path.join(__dirname, 'modules', 'vm', 'variables.tf');
         const moduleVariablesContent = fs.readFileSync(moduleVariablesPath, 'utf8');
         
-        if (moduleVariablesContent.includes('https://satellite.chrobinson.com/api/v2')) {
-            console.log('✅ PASS: Module variables.tf contains correct satellite URL');
+        if (moduleVariablesContent.includes('https://10.69.184.144')) {
+            console.log('✅ PASS: Module variables.tf contains correct satellite IP');
         } else {
-            console.log('❌ FAIL: Module variables.tf does not contain correct satellite URL');
+            console.log('❌ FAIL: Module variables.tf does not contain correct satellite IP');
+            return false;
+        }
+        
+        if (moduleVariablesContent.includes('chr_username')) {
+            console.log('✅ PASS: Module variables.tf contains chr_username variable');
+        } else {
+            console.log('❌ FAIL: Module variables.tf does not contain chr_username variable');
+            return false;
+        }
+        
+        if (moduleVariablesContent.includes('chr_password')) {
+            console.log('✅ PASS: Module variables.tf contains chr_password variable');
+        } else {
+            console.log('❌ FAIL: Module variables.tf does not contain chr_password variable');
             return false;
         }
         
@@ -137,7 +177,7 @@ function testDocumentation() {
 }
 
 function testProvisionerScript() {
-    console.log('\n📋 Test 5: Verify VM provisioner uses correct API endpoint');
+    console.log('\n📋 Test 5: Verify VM provisioner uses correct API endpoint and authentication');
     
     try {
         const vmMainPath = path.join(__dirname, 'modules', 'vm', 'main.tf');
@@ -157,10 +197,17 @@ function testProvisionerScript() {
             return false;
         }
         
-        if (vmMainContent.includes('password = var.ssh_password')) {
-            console.log('✅ PASS: VM provisioner uses password authentication');
+        if (vmMainContent.includes('-u "${var.chr_username}:${var.chr_password}"')) {
+            console.log('✅ PASS: VM provisioner uses basic authentication for API requests');
         } else {
-            console.log('❌ FAIL: VM provisioner does not use password authentication');
+            console.log('❌ FAIL: VM provisioner does not use basic authentication for API requests');
+            return false;
+        }
+        
+        if (vmMainContent.includes('password = var.ssh_password')) {
+            console.log('✅ PASS: VM provisioner uses password authentication for SSH');
+        } else {
+            console.log('❌ FAIL: VM provisioner does not use password authentication for SSH');
             return false;
         }
         

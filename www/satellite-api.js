@@ -3,9 +3,9 @@ class SatelliteApi {
   constructor() {
     this.getChrApiServer = () => {
       if (window.globalSettings && window.globalSettings.satellite) {
-        return window.globalSettings.satellite.chr_api_server || 'http://your-api-server:8000';
+        return window.globalSettings.satellite.url || 'https://satellite.chrobinson.com';
       }
-      return 'http://your-api-server:8000';
+      return 'https://satellite.chrobinson.com';
     };
     
     this.getSatelliteUrl = () => {
@@ -13,6 +13,10 @@ class SatelliteApi {
         return window.globalSettings.satellite.url || 'https://satellite.chrobinson.com';
       }
       return 'https://satellite.chrobinson.com';
+    };
+    
+    this.getApiUrl = () => {
+      return this.getSatelliteUrl() + '/api/v2';
     };
     
     this.getCredentials = () => {
@@ -180,8 +184,8 @@ class SatelliteApi {
    */
   async notifyDeploymentComplete(hostname, hostGroup) {
     try {
-      const chrApiServer = this.getChrApiServer();
-      const response = await fetch(`${chrApiServer}/chr/notify-deployment`, {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/chr/notify-deployment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -363,7 +363,42 @@ app.post('/api/terraform/apply', async (req, res) => {
             'TF_VAR_vsphere_password': effectivePassword
         };
 
-        // Create a status file to track this deployment
+        // Check plan age and refresh state if needed
+        const planStats = fs.statSync(planPath);
+        const planAgeMinutes = (Date.now() - planStats.mtime.getTime()) / (1000 * 60);
+        const maxPlanAgeMinutes = 30; // Consider plan stale after 30 minutes
+
+        console.log(`Plan file age: ${planAgeMinutes.toFixed(1)} minutes`);
+
+        if (planAgeMinutes > maxPlanAgeMinutes) {
+            console.log('Plan is older than 30 minutes, refreshing state and regenerating plan...');
+            
+            // First, refresh the state to get latest infrastructure changes
+            try {
+                console.log('Refreshing Terraform state...');
+                await runTerraformCommand('refresh', [
+                    '-var-file', workspace.tfvarsPath
+                ], workspace.terraformDir, env);
+                
+                // Regenerate the plan to ensure it's current
+                console.log('Regenerating plan after state refresh...');
+                const newPlanResult = await runTerraformCommand('plan', [
+                    '-var-file', workspace.tfvarsPath,
+                    '-out', planPath
+                ], workspace.terraformDir, env);
+                
+                // Update workspace with new plan output
+                workspace.planOutput = newPlanResult.stdout;
+                workspace.lastPlanned = new Date().toISOString();
+                fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                
+                console.log('Plan refreshed successfully');
+                
+            } catch (refreshError) {
+                console.warn('State refresh failed, attempting to apply existing plan:', refreshError.message);
+                // Continue with existing plan if refresh fails
+            }
+        }        // Create a status file to track this deployment
         const statusFilePath = path.join(runDir, 'status.json');
         const statusData = {
             status: 'running',
@@ -373,12 +408,67 @@ app.post('/api/terraform/apply', async (req, res) => {
         };
         fs.writeFileSync(statusFilePath, JSON.stringify(statusData, null, 2));
 
-        // Run terraform apply from the workspace directory
+        // Run terraform apply from the workspace directory with retry logic for stale plans
         console.log('Applying terraform plan:', planPath);
         
-        const applyResult = await runTerraformCommand('apply', [
-            planPath
-        ], workspace.terraformDir, env);
+        let applyResult;
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        while (retryCount <= maxRetries) {
+            try {
+                applyResult = await runTerraformCommand('apply', [
+                    planPath
+                ], workspace.terraformDir, env);
+                
+                // If apply succeeds, break out of retry loop
+                break;
+                
+            } catch (applyError) {
+                console.log(`Apply attempt ${retryCount + 1} failed:`, applyError.message);
+                
+                // Check if it's a stale plan error
+                if (applyError.stderr && applyError.stderr.includes('Saved plan is stale')) {
+                    console.log('Detected stale plan error, attempting to refresh and regenerate plan...');
+                    
+                    if (retryCount < maxRetries) {
+                        try {
+                            // Refresh state
+                            console.log('Refreshing Terraform state...');
+                            await runTerraformCommand('refresh', [
+                                '-var-file', workspace.tfvarsPath
+                            ], workspace.terraformDir, env);
+                            
+                            // Generate new plan
+                            console.log('Generating new plan...');
+                            const newPlanResult = await runTerraformCommand('plan', [
+                                '-var-file', workspace.tfvarsPath,
+                                '-out', planPath
+                            ], workspace.terraformDir, env);
+                            
+                            // Update workspace with new plan
+                            workspace.planOutput = newPlanResult.stdout;
+                            workspace.lastPlanned = new Date().toISOString();
+                            fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                            
+                            console.log(`Plan regenerated, retrying apply (attempt ${retryCount + 2})...`);
+                            retryCount++;
+                            continue;
+                            
+                        } catch (retryError) {
+                            console.error('Failed to refresh state and regenerate plan:', retryError.message);
+                            throw applyError; // Throw original error if refresh fails
+                        }
+                    } else {
+                        console.error('Max retries reached for stale plan error');
+                        throw applyError;
+                    }
+                } else {
+                    // Not a stale plan error, don't retry
+                    throw applyError;
+                }
+            }
+        }
 
         // Update status file with success
         const updatedStatus = {
@@ -458,10 +548,116 @@ app.post('/api/terraform/apply', async (req, res) => {
                 console.error('Error updating workspace data:', wsError);
             }
         }
+          res.status(500).json({
+            success: false,
+            message: 'Error applying terraform',
+            error: error.stdout || error.stderr || error.message
+        });
+    }
+});
+
+// Endpoint to refresh a stale plan
+app.post('/api/terraform/refresh-plan', async (req, res) => {
+    try {
+        const { workspaceId, vspherePassword } = req.body;
+        
+        // Get global settings
+        const globalSettings = settings.getSettings();
+        
+        if (!workspaceId) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Workspace ID is required' 
+            });
+        }
+        
+        // Use password from request or fall back to global settings
+        const effectivePassword = vspherePassword || 
+                                 (globalSettings.vsphere && globalSettings.vsphere.password) || 
+                                 null;
+        
+        if (!effectivePassword) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing vSphere password. Please provide a password.'
+            });
+        }
+
+        // Check if workspace exists
+        const workspacePath = path.join(WORKSPACES_DIR, `${workspaceId}.json`);
+        if (!fs.existsSync(workspacePath)) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Workspace not found' 
+            });
+        }
+
+        // Get workspace data
+        const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+        
+        if (!workspace.terraformDir || !workspace.tfvarsPath) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Workspace not properly configured. Please run plan first.' 
+            });
+        }
+
+        // Set up environment for terraform
+        const env = {
+            'TF_VAR_vsphere_password': effectivePassword
+        };
+
+        console.log('Refreshing workspace plan for:', workspaceId);
+
+        // Refresh the state
+        console.log('Refreshing Terraform state...');
+        await runTerraformCommand('refresh', [
+            '-var-file', workspace.tfvarsPath
+        ], workspace.terraformDir, env);
+
+        // Generate new plan
+        console.log('Generating new plan...');
+        const planResult = await runTerraformCommand('plan', [
+            '-var-file', workspace.tfvarsPath,
+            '-out', workspace.planPath
+        ], workspace.terraformDir, env);
+
+        // Update the workspace data
+        workspace.planOutput = planResult.stdout;
+        workspace.lastPlanned = new Date().toISOString();
+        workspace.status = 'planned';
+        workspace.error = null; // Clear any previous errors
+        
+        fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+
+        res.json({
+            success: true,
+            message: 'Plan refreshed successfully',
+            planOutput: planResult.stdout,
+            lastPlanned: workspace.lastPlanned
+        });
+        
+    } catch (error) {
+        console.error('Error refreshing plan:', error);
+        
+        // Update workspace with error if we have workspace ID
+        if (req.body.workspaceId) {
+            try {
+                const workspacePath = path.join(WORKSPACES_DIR, `${req.body.workspaceId}.json`);
+                if (fs.existsSync(workspacePath)) {
+                    const workspace = JSON.parse(fs.readFileSync(workspacePath, 'utf8'));
+                    workspace.error = error.stderr || error.message;
+                    workspace.lastUpdated = new Date().toISOString();
+                    fs.writeFileSync(workspacePath, JSON.stringify(workspace, null, 2));
+                }
+            } catch (wsError) {
+                console.error('Error updating workspace with refresh error:', wsError);
+            }
+        }
         
         res.status(500).json({
             success: false,
-            message: 'Error applying terraform',
+            message: 'Error refreshing plan',
             error: error.stdout || error.stderr || error.message
         });
     }

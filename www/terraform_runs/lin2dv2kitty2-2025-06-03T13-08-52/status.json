@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-06-03T13:13:58.042Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty2-2025-06-03T13-08-52/lin2dv2kitty2.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-03T13:13:59.166Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mSaved plan is stale\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0mThe given plan file can no longer be applied because the state was changed\n\u001b[31m│\u001b[0m \u001b[0mby another operation after the plan was created.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-06-03T13:13:59.166Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mSaved plan is stale\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0mThe given plan file can no longer be applied because the state was changed\n\u001b[31m│\u001b[0m \u001b[0mby another operation after the plan was created.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

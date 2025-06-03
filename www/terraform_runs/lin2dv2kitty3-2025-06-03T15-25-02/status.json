@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "startTime": "2025-06-03T15:25:33.154Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty3-2025-06-03T15-25-02/lin2dv2kitty3.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-03T15:26:41.348Z",
+      "message": "Terraform apply completed successfully"
+    }
+  ],
+  "endTime": "2025-06-03T15:26:41.348Z",
+  "output": "\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Modifying... [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b, 10s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b, 20s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b, 30s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b, 40s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b, 50s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Still modifying... [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b, 1m0s elapsed]\u001b[0m\u001b[0m\n\u001b[0m\u001b[1mmodule.vm.vsphere_virtual_machine.vm: Modifications complete after 1m4s [id=4236d54b-1ef2-f7e1-de8e-5e6a36214d7b]\u001b[0m\n\u001b[0m\u001b[1m\u001b[32m\nApply complete! Resources: 0 added, 1 changed, 0 destroyed.\n\u001b[0m\u001b[0m\u001b[1m\u001b[32m\nOutputs:\n\n\u001b[0mvm_id = \"4236d54b-1ef2-f7e1-de8e-5e6a36214d7b\"\nvm_ip = \"10.74.184.76\"\nvm_name = \"lin2dv2kitty3\"\n"
+}
