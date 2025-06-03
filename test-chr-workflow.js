@@ -24,7 +24,7 @@ const mockFormData = {
     vm_guest_id: 'ubuntu64Guest',
     vm_hostname: 'test-linux-vm',
     vm_domain: 'chrobinson.com',    vm_host_group: 'Linux/Production/WebServers',  // CHR host group for Linux
-    chr_api_server: 'https://10.69.184.144/api/v2',
+    chr_api_server: 'https://satellite.chrobinson.com/api/v2',
     ssh_user: 'root',
     ssh_password: 'C9msV+s3'
 };

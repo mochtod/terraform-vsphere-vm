@@ -163,7 +163,7 @@ variable "vm_host_group" {
 variable "chr_api_server" {
   description = "The CHR API server URL for registration"
   type        = string
-  default     = "https://10.69.184.144/api/v2"
+  default     = "https://satellite.chrobinson.com/api/v2"
 }
 
 variable "ssh_password" {
