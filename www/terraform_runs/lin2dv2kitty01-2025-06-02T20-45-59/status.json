@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-06-02T20:46:26.061Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty01-2025-06-02T20-45-59/lin2dv2kitty01.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-02T20:48:02.605Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mInvalid function argument\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  on modules/vm/main.tf line 72, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  72:       private_key = file(\u001b[4mvar.ssh_private_key_path\u001b[0m)\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m├────────────────\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m    \u001b[90m│\u001b[0m while calling \u001b[1mfile\u001b[0m(\u001b[0mpath)\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m│\u001b[0m \u001b[1mvar.ssh_private_key_path\u001b[0m is \"~/.ssh/id_rsa\"\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0mInvalid value for \"path\" parameter: no file exists at \"~/.ssh/id_rsa\"; this\n\u001b[31m│\u001b[0m \u001b[0mfunction works only with files that are distributed as part of the\n\u001b[31m│\u001b[0m \u001b[0mconfiguration source code, so if this file will be created by a resource in\n\u001b[31m│\u001b[0m \u001b[0mthis configuration you must instead obtain this result from an attribute of\n\u001b[31m│\u001b[0m \u001b[0mthat resource.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-06-02T20:48:02.605Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mInvalid function argument\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  on modules/vm/main.tf line 72, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  72:       private_key = file(\u001b[4mvar.ssh_private_key_path\u001b[0m)\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m├────────────────\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m    \u001b[90m│\u001b[0m while calling \u001b[1mfile\u001b[0m(\u001b[0mpath)\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m│\u001b[0m \u001b[1mvar.ssh_private_key_path\u001b[0m is \"~/.ssh/id_rsa\"\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0mInvalid value for \"path\" parameter: no file exists at \"~/.ssh/id_rsa\"; this\n\u001b[31m│\u001b[0m \u001b[0mfunction works only with files that are distributed as part of the\n\u001b[31m│\u001b[0m \u001b[0mconfiguration source code, so if this file will be created by a resource in\n\u001b[31m│\u001b[0m \u001b[0mthis configuration you must instead obtain this result from an attribute of\n\u001b[31m│\u001b[0m \u001b[0mthat resource.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

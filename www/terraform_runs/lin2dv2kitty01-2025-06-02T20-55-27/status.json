@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-06-02T20:55:53.650Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty01-2025-06-02T20-55-27/lin2dv2kitty01.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-02T20:57:32.723Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mInvalid function argument\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  on modules/vm/main.tf line 71, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  71:       private_key = file(\u001b[4mvar.ssh_private_key_path\u001b[0m)\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m├────────────────\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m    \u001b[90m│\u001b[0m while calling \u001b[1mfile\u001b[0m(\u001b[0mpath)\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m│\u001b[0m \u001b[1mvar.ssh_private_key_path\u001b[0m is \"./www/satellite1.pem\"\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0mInvalid value for \"path\" parameter: no file exists at\n\u001b[31m│\u001b[0m \u001b[0m\"./www/satellite1.pem\"; this function works only with files that are\n\u001b[31m│\u001b[0m \u001b[0mdistributed as part of the configuration source code, so if this file will\n\u001b[31m│\u001b[0m \u001b[0mbe created by a resource in this configuration you must instead obtain this\n\u001b[31m│\u001b[0m \u001b[0mresult from an attribute of that resource.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-06-02T20:57:32.723Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1mInvalid function argument\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  on modules/vm/main.tf line 71, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m  71:       private_key = file(\u001b[4mvar.ssh_private_key_path\u001b[0m)\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m├────────────────\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m    \u001b[90m│\u001b[0m while calling \u001b[1mfile\u001b[0m(\u001b[0mpath)\n\u001b[31m│\u001b[0m \u001b[0m    \u001b[90m│\u001b[0m \u001b[1mvar.ssh_private_key_path\u001b[0m is \"./www/satellite1.pem\"\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0mInvalid value for \"path\" parameter: no file exists at\n\u001b[31m│\u001b[0m \u001b[0m\"./www/satellite1.pem\"; this function works only with files that are\n\u001b[31m│\u001b[0m \u001b[0mdistributed as part of the configuration source code, so if this file will\n\u001b[31m│\u001b[0m \u001b[0mbe created by a resource in this configuration you must instead obtain this\n\u001b[31m│\u001b[0m \u001b[0mresult from an attribute of that resource.\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

@@ -15,8 +15,8 @@
   },
   "lastUpdated": "2025-06-02T19:46:45.468Z",
   "satellite": {
-    "chr_api_server": "satellite.chrobinson.com",
-    "url": "https://satellite.chrobinson.com/api/v2",
+    "chr_api_server": "10.69.184.144",
+    "url": "https://10.69.184.144/api/v2",
     "username": "chradmin",
     "password": "C9msV+s3"
   }

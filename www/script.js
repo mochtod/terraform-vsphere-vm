@@ -686,6 +686,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Add CHR API server from global settings if available
+        if (window.globalSettings && window.globalSettings.satellite && window.globalSettings.satellite.url) {
+            tfvarsContent += `chr_api_server = "${window.globalSettings.satellite.url}"\n`;
+        }
+        
         // Add password comment
         tfvarsContent += `# vsphere_password should be set as an environment variable TF_VAR_vsphere_password for security\n`;
         
@@ -696,9 +701,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.currentWorkspace) {
             saveWorkspaceConfig();
         }
-        
-        return tfvarsContent;
-    }    // Function to save current form data to the workspace
+          return tfvarsContent;
+    }
+    
+    // Function to save current form data to the workspace
     function saveWorkspaceConfig() {
         if (!window.currentWorkspace) return;
         

@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "startTime": "2025-06-02T21:10:33.342Z",
+  "planPath": "/mnt/c/Users/mochtod/terraform-vsphere-vm-3/www/terraform_runs/lin2dv2kitty01-2025-06-02T21-10-02/lin2dv2kitty01.tfplan",
+  "logs": [
+    {
+      "time": "2025-06-02T21:11:44.706Z",
+      "message": "Terraform apply failed",
+      "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1merror running VM migration: error running vMotion on datastore cluster \"np-cl70-dsc\": DRS cannot find a host to power on or migrate the virtual machine.\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 1, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m   1: resource \"vsphere_virtual_machine\" \"vm\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+    }
+  ],
+  "endTime": "2025-06-02T21:11:44.706Z",
+  "error": "\u001b[31m╷\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[1m\u001b[31mError: \u001b[0m\u001b[0m\u001b[1merror running VM migration: error running vMotion on datastore cluster \"np-cl70-dsc\": DRS cannot find a host to power on or migrate the virtual machine.\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\u001b[0m  with module.vm.vsphere_virtual_machine.vm,\n\u001b[31m│\u001b[0m \u001b[0m  on modules/vm/main.tf line 1, in resource \"vsphere_virtual_machine\" \"vm\":\n\u001b[31m│\u001b[0m \u001b[0m   1: resource \"vsphere_virtual_machine\" \"vm\" \u001b[4m{\u001b[0m\u001b[0m\n\u001b[31m│\u001b[0m \u001b[0m\n\u001b[31m╵\u001b[0m\u001b[0m\n"
+}

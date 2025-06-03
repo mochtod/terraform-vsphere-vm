@@ -47,5 +47,28 @@ resource "vsphere_virtual_machine" "vm" {
 
       ipv4_gateway = var.ipv4_gateway
     }
+  }  # Post-deployment provisioner to register with CHR (Satellite)
+  provisioner "remote-exec" {
+    inline = [
+      "# Wait for system to be ready",
+      "sleep 30",
+      "# Register to CHR (on-premise) - using the selected host group",
+      "if [ ! -z '${var.vm_host_group}' ]; then",
+      "  echo 'Registering host with CHR using host group: ${var.vm_host_group}'",
+      "  eval $(curl -sS -X POST ${var.chr_api_server}/chr/register \\",
+      "    -H \"Content-Type: application/json\" \\",
+      "    -d '{\"hostgroup_name\": \"${var.vm_host_group}\", \"auto_run\": false}' | jq -r '.registration_command')",      "  echo 'CHR registration completed'",
+      "else",
+      "  echo 'No host group specified, skipping CHR registration'",
+      "fi"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = var.ssh_user
+      host        = var.ipv4_address
+      password    = var.ssh_password
+      timeout     = "5m"
+    }
   }
 }

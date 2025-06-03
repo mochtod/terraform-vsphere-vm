@@ -88,3 +88,28 @@ variable "additional_disks" {
   type        = list(number)
   default     = []
 }
+
+variable "vm_host_group" {
+  description = "The host group for CHR (Satellite) registration"
+  type        = string
+  default     = ""
+}
+
+variable "chr_api_server" {
+  description = "The CHR API server URL for registration"
+  type        = string
+  default     = "https://satellite.chrobinson.com/api/v2"
+}
+
+variable "ssh_password" {
+  description = "SSH password for post-deployment provisioning (template default password)"
+  type        = string
+  default     = "C9msV+s3"
+  sensitive   = true
+}
+
+variable "ssh_user" {
+  description = "SSH user for post-deployment provisioning"
+  type        = string
+  default     = "root"
+}

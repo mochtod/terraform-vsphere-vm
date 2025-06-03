@@ -69,4 +69,8 @@ module "vm" {
   ipv4_netmask        = module.netbox_ip.ipv4_netmask
   ipv4_gateway        = module.netbox_ip.ipv4_gateway
   additional_disks    = var.additional_disks
+  vm_host_group       = var.vm_host_group
+  chr_api_server      = var.chr_api_server
+  ssh_password        = var.ssh_password
+  ssh_user            = var.ssh_user
 }
